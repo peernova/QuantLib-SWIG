@@ -5,7 +5,7 @@ BUILT_SOURCES = quantlib_wrap.cpp quantlib_wrap.h
 
 EXAMPLES = Bonds CallableBonds CallableBondsOAS DiscreteHedging EquityOptions FRA FunctionDelegates Time
 
-NATIVE_FOLDER = libraries/$(shell uname | tr '[:upper:]' '[:lower:]')/$(shell uname -m)
+NATIVE_FOLDER = libraries/$(shell uname | tr '[:upper:]' '[:lower:]')/$(shell uname -m | sed 's/aarch/arm/' | sed 's/x86_64/amd64/')
 
 NATIVE_SOURCE = $(shell quantlib-config --prefix)/lib
 
