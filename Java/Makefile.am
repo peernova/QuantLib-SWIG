@@ -42,7 +42,7 @@ libQuantLibJNI.@JNILIB_EXTENSION@: quantlib_wrap.o
 QuantLib.jar: quantlib_wrap.cpp org/quantlib/*.java
 	rm -rf bin $(NATIVE_FOLDER)
 	mkdir -p bin $(NATIVE_FOLDER)
-	mv libQuantLibJNI.jnilib $(NATIVE_FOLDER)
+	find -EL . -regex '.*/libQuantLibJNI\.(jnilib|so)$$' -exec cp {} $(NATIVE_FOLDER) \;
 	find -EL $(NATIVE_SOURCE) -regex '.*/libQuantLib\.(dylib|so)$$' -exec cp {} $(NATIVE_FOLDER) \;
 	find org/quantlib -name '*.java' | xargs $(JAVAC) -g -d bin
 	$(JAR) cf QuantLib.jar -C bin org libraries
