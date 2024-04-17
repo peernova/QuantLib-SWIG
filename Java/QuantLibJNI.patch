@@ -17,8 +17,8 @@
 >     static {
 >         String os = System.getProperty("os.name").replace(" ", "").toLowerCase();
 >         os = os.replaceAll("macosx", "darwin");
->         String arch = System.getProperty("os.arch").toLowerCase();
->         arch = arch.replaceAll("aarch", "arm");
+>         String arch = System.getProperty("os.arch").replace("-", "_").toLowerCase();
+>         arch = arch.replaceAll("aarch", "arm").replaceAll("x86_64", "amd64");
 >         String[] fileTypes = new String[]{"so", "dylib", "jnilib"};
 >         String[] libs = {"libQuantLibJNI", "libQuantLib"};
 >         for (String lib : libs) {
