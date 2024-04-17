@@ -40,10 +40,10 @@ libQuantLibJNI.@JNILIB_EXTENSION@: quantlib_wrap.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) @SHARED_LIB@ quantlib_wrap.o -o libQuantLibJNI.@JNILIB_EXTENSION@ `quantlib-config --libs`
 
 QuantLib.jar: quantlib_wrap.cpp org/quantlib/*.java
-	rm -rf bin $(NATIVE_FOLDER)
+	rm -rf bin libraries
 	mkdir -p bin $(NATIVE_FOLDER)
-	find -EL . -regex '.*/libQuantLibJNI\.(jnilib|so)$$' -exec cp {} $(NATIVE_FOLDER) \;
-	find -EL $(NATIVE_SOURCE) -regex '.*/libQuantLib\.(dylib|so)$$' -exec cp {} $(NATIVE_FOLDER) \;
+	find .  \( -name 'libQuantLibJNI.jnilib' -or -name 'libQuantLibJNI.so' \) -exec cp {} $(NATIVE_FOLDER) \;
+	find $(NATIVE_SOURCE) \( -name 'libQuantLib.dylib' -or -name 'libQuantLib.so' \) -exec cp {} $(NATIVE_FOLDER) \;
 	find org/quantlib -name '*.java' | xargs $(JAVAC) -g -d bin
 	$(JAR) cf QuantLib.jar -C bin org libraries
 
