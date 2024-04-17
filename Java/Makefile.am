@@ -5,6 +5,10 @@ BUILT_SOURCES = quantlib_wrap.cpp quantlib_wrap.h
 
 EXAMPLES = Bonds CallableBonds CallableBondsOAS DiscreteHedging EquityOptions FRA FunctionDelegates Time
 
+NATIVE_FOLDER = libraries/$(shell uname | tr '[:upper:]' '[:lower:]')/$(shell uname -m)
+
+NATIVE_SOURCE = $(shell quantlib-config --prefix)/lib
+
 SWIGFLAGS =
 
 if JAVA_AUTOLOAD
@@ -36,9 +40,12 @@ libQuantLibJNI.@JNILIB_EXTENSION@: quantlib_wrap.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) @SHARED_LIB@ quantlib_wrap.o -o libQuantLibJNI.@JNILIB_EXTENSION@ `quantlib-config --libs`
 
 QuantLib.jar: quantlib_wrap.cpp org/quantlib/*.java
-	mkdir -p bin
+	rm -rf bin $(NATIVE_FOLDER)
+	mkdir -p bin $(NATIVE_FOLDER)
+	mv libQuantLibJNI.jnilib $(NATIVE_FOLDER)
+	find -EL $(NATIVE_SOURCE) -regex '.*/libQuantLib\.(dylib|so)$$' -exec cp {} $(NATIVE_FOLDER) \;
 	find org/quantlib -name '*.java' | xargs $(JAVAC) -g -d bin
-	$(JAR) cf QuantLib.jar -C bin org
+	$(JAR) cf QuantLib.jar -C bin org libraries
 
 install-exec-local:
 	mkdir -p $(DESTDIR)/$(libdir)
@@ -54,10 +61,11 @@ endif
 endif
 
 
-quantlib_wrap.cpp: ../SWIG/*.i
+quantlib_wrap.cpp: ../SWIG/*.i QuantLibJNI.patch
 	mkdir -p org/quantlib
 	$(SWIG) $(SWIGFLAGS) -java -c++ -outdir org/quantlib \
             -package org.quantlib -o quantlib_wrap.cpp ../SWIG/quantlib.i
+	patch org/quantlib/QuantLibJNI.java <QuantLibJNI.patch
 
 dist-hook:
 	mkdir -p $(distdir)/org/quantlib

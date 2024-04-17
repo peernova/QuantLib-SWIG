@@ -1,0 +1,52 @@
+10a11,18
+> import java.io.File;
+> import java.io.InputStream;
+> import java.io.OutputStream;
+> import java.io.BufferedOutputStream;
+> import java.io.FileOutputStream;
+> import java.io.IOException;
+> import java.net.URL;
+> 
+13,16c21,57
+<   /// Load the JNI library
+<   static {
+<     System.loadLibrary("QuantLibJNI");
+<   }
+---
+>     /// Load the JNI library
+>     static {
+>         String os = System.getProperty("os.name").replace(" ", "").toLowerCase();
+>         os = os.replaceAll("macosx", "darwin");
+>         String arch = System.getProperty("os.arch").toLowerCase();
+>         arch = arch.replaceAll("aarch", "arm");
+>         String[] fileTypes = new String[]{"so", "dylib", "jnilib"};
+>         String[] libs = {"libQuantLibJNI", "libQuantLib"};
+>         for (String lib : libs) {
+>             URL asset = null;
+>             for (String ext : fileTypes) {
+>                 String name = String.format("/libraries/%s/%s/%s.%s", os, arch, lib, ext);
+>                 asset = QuantLibJNI.class.getResource(name);
+>                 if (asset != null)
+>                     break;
+>             }
+>             if (asset != null) {
+>                 try {
+>                     final File tmpFile = File.createTempFile(lib, "");
+>                     tmpFile.deleteOnExit();
+> 
+>                     final InputStream in = asset.openStream();
+>                     final OutputStream out = new BufferedOutputStream(new FileOutputStream(tmpFile));
+> 
+>                     int len = 0;
+>                     byte[] buffer = new byte[8192];
+>                     while ((len = in.read(buffer)) > -1)
+>                         out.write(buffer, 0, len);
+>                     out.close();
+>                     in.close();
+>                     System.load(tmpFile.getAbsolutePath());
+>                 } catch (IOException ignore) {
+>                 }
+>             }
+>         }
+>         swig_module_init();
+>     }
