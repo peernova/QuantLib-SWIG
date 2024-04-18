@@ -27,7 +27,7 @@
 +        String[] fileTypes = new String[]{"so", "dylib", "jnilib"};
 +        String[] libs = {"libQuantLib", "libQuantLibJNI"};
 +        String quantLibPath = System.getenv("QUANTLIB_LIBRARY_PATH");
-+        if (quantLibPath.isEmpty()) {
++        if (quantLibPath == null || quantLibPath.isEmpty()) {
 +           quantLibPath = "/tmp";
 +        }
 +        for (String lib : libs) {
