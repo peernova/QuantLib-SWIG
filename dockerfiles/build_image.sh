@@ -27,10 +27,10 @@ docker system prune -f
 for p in amd64 arm64; do
   docker build --platform linux/${p} -t ${repo}/qlbase:${p} -f pn.base.Dockerfile .
   docker build --platform linux/${p} --build-arg="cpu_arch=${p}" -t ${repo}/quantlib:${p} -f pn.quantlib.Dockerfile .
-  rm -rf /tmp/quantlib/${p}
-  mkdir -p /tmp/quantlib/${p}
-  docker run -ti --mount type=bind,source=/tmp/quantlib/${p},target=/quantlib ${repo}/quantlib:${p} \
-     /bin/sh -c 'cp /quantlib.tgz /quantlib'
+  rm -rf /tmp/libs/${p}
+  mkdir -p /tmp/libs/${p}
+  docker run -ti --mount type=bind,source=/tmp/libs/${p},target=/libs ${repo}/quantlib:${p} \
+     /bin/sh -c 'cp /quantlib.tgz /libs'
 done
 
 cat << 'EOF' >/tmp/localbuild.sh
@@ -90,7 +90,7 @@ arch -x86_64 /bin/bash /tmp/localbuild.sh
 
 # combining all natives libraries as part of the jar
 for p amd64 arm64; do
-  cd /tmp/quantlib/${p}
+  cd /tmp/libs/${p}
   tar -xzf quantlib.tgz
   cp java/* /tmp/QuantLib-SWIG/Java/libraries/darwin/${p}
 done
