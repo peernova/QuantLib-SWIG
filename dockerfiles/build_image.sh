@@ -22,21 +22,21 @@ fi
 
 repo=bfrancojr
 
-#docker system prune -f
+docker system prune -f
 
-#for p in amd64 arm64; do
-#  docker build --platform linux/${p} -t ${repo}/qlbase:${p} -f pn.base.Dockerfile .
-#  docker build --platform linux/${p} --build-arg="cpu_arch=${p}" -t ${repo}/quantlib:${p} -f pn.quantlib.Dockerfile .
-#  rm -rf /tmp/quantlib/${p}
-#  mkdir -p /tmp/quantlib/${p}
-#  docker run -ti --mount type=bind,source=/tmp/quantlib/${p},target=/quantlib ${repo}/quantlib:${p} \
-#     /bin/sh -c 'cp /root/quantlib.tgz /quantlib'
-#done
+for p in amd64 arm64; do
+  docker build --platform linux/${p} -t ${repo}/qlbase:${p} -f pn.base.Dockerfile .
+  docker build --platform linux/${p} --build-arg="cpu_arch=${p}" -t ${repo}/quantlib:${p} -f pn.quantlib.Dockerfile .
+  rm -rf /tmp/quantlib/${p}
+  mkdir -p /tmp/quantlib/${p}
+  docker run -ti --mount type=bind,source=/tmp/quantlib/${p},target=/quantlib ${repo}/quantlib:${p} \
+     /bin/sh -c 'cp /quantlib.tgz /quantlib'
+done
 
 cat << 'EOF' >/tmp/localbuild.sh
 set -eux
-cpuarch="$(uane -m | sed 's/aarch/arm/' | sed 's/x86./amd/')"
-if [ "${cpuarch}" == "amd64" ]; then
+cpu_arch="$(uane -m | sed 's/aarch/arm/' | sed 's/x86./amd/')"
+if [ "${cpu_arch}" == "amd64" ]; then
   eval "$(/usr/local/bin/brew shellenv)"
 else
   eval "$(/opt/homebrew/bin/brew shellenv)"
@@ -75,9 +75,9 @@ git checkout peernova
 export PATH=$PATH:/tmp/local/bin
 CXXFLAS="-g -O2 -I$boostdir/include/boost -I/tmp/local/include" ./configure --with-jdk-include=$(/usr/libexec/java_home -v11)/include --with-jdk-system-include=$(/usr/libexec/java_home -v11)/include/darwin  --disable-java-finalizer --prefix=/tmp/local
 make -C Java
-mkdir -p Java/libraries/darwin/$cuparch
-cp Java/libQuantlibJNI.dylib Java/libraries/darwin/$cuparch
-cp /tmp/local/lib/libQuantlib.dylib Java/libraries/darwin/$cuparch
+mkdir -p Java/libraries/darwin/${cpu_arch}
+cp Java/libQuantlibJNI.dylib Java/libraries/darwin/${cpu_arch}
+cp /tmp/local/lib/libQuantlib.dylib Java/libraries/darwin/${cpu_arch}
 EOF
 
 rm -rf /tmp/local
