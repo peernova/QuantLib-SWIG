@@ -24,10 +24,11 @@ repo=bfrancojr
 
 docker system prune -f
 
+rm -rf /tmp/libs
+
 for p in amd64 arm64; do
   docker build --platform linux/${p} -t ${repo}/qlbase:${p} -f pn.base.Dockerfile .
   docker build --platform linux/${p} --build-arg="cpu_arch=${p}" -t ${repo}/quantlib:${p} -f pn.quantlib.Dockerfile .
-  rm -rf /tmp/libs/${p}
   mkdir -p /tmp/libs/${p}
   docker run -ti --mount type=bind,source=/tmp/libs/${p},target=/libs ${repo}/quantlib:${p} \
      /bin/sh -c 'cp /quantlib.tgz /libs'
@@ -42,21 +43,23 @@ else
   eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 brew install boost automake pcre2
-if brew list swig; then
-  brew uninstall swig
-fi
 boostdir="$(brew --cellar boost)/$(brew list --version boost | tail -1 | cut -d' ' -f2)"
 cd /tmp
-rm -rf swig
-git clone https://github.com/swig/swig.git
-cd swig
-git checkout v4.1.1;
-./autogen.sh
-./configure --prefix=$(brew --prefix) --without-android --without-csharp --without-d --without-go --without-guile --without-javascript --without-lua --without-mzscheme --without-ocaml --without-octave --without-perl5 --without-php --without-r --without-ruby --without-scilab --without-tcl --with-boost=${boostdir}
-make
-make install
-cd ..
-rm -rf swig
+if ! which -s swig || [ "$(swig -version | head -2 | tail -1 | cut -d' ' -f 3)" != "4.1.1" ]; then 
+  if brew list swig; then
+    brew uninstall swig
+  fi
+  rm -rf swig
+  git clone https://github.com/swig/swig.git
+  cd swig
+  git checkout v4.1.1;
+  ./autogen.sh
+  ./configure --prefix=$(brew --prefix) --without-android --without-csharp --without-d --without-go --without-guile --without-javascript --without-lua --without-mzscheme --without-ocaml --without-octave --without-perl5 --without-php --without-r --without-ruby --without-scilab --without-tcl --with-boost=${boostdir}
+  make
+  make install
+  cd ..
+  rm -rf swig
+fi
 rm -rf Quantlib
 git clone --recurse https://github.com/lballabio/QuantLib.git
 cd QuantLib
@@ -98,3 +101,7 @@ done
 cd /tmp/QuantLib-SWIG/Java
 jar cf $HOME/QunatLib.jar -C bin org libraries
 
+rm -rf /tmp/libs
+rm -rf /tmp/localbuild.sh
+rm -rf /tmp/QuantLib
+rm -rf /tmp/QuantLib-SWIG
