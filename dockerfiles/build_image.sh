@@ -36,7 +36,7 @@ done
 
 cat << 'EOF' >/tmp/localbuild.sh
 set -eux
-cpu_arch="$(uane -m | sed 's/aarch/arm/' | sed 's/x86./amd/')"
+cpu_arch="$(unane -m | sed 's/aarch/arm/' | sed 's/x86./amd/')"
 if [ "${cpu_arch}" == "amd64" ]; then
   eval "$(/usr/local/bin/brew shellenv)"
 else
@@ -79,8 +79,8 @@ export PATH=$PATH:/tmp/local/bin
 CXXFLAS="-g -O2 -I$boostdir/include/boost -I/tmp/local/include" ./configure --with-jdk-include=$(/usr/libexec/java_home -v11)/include --with-jdk-system-include=$(/usr/libexec/java_home -v11)/include/darwin  --disable-java-finalizer --prefix=/tmp/local
 make -C Java
 mkdir -p Java/libraries/darwin/${cpu_arch}
-cp Java/libQuantlibJNI.dylib Java/libraries/darwin/${cpu_arch}
-cp /tmp/local/lib/libQuantlib.dylib Java/libraries/darwin/${cpu_arch}
+cp Java/libQuantLibJNI.jnilib Java/libraries/darwin/${cpu_arch}
+cp /tmp/local/lib/libQuantLib.dylib Java/libraries/darwin/${cpu_arch}
 EOF
 
 rm -rf /tmp/local
