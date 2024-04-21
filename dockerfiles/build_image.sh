@@ -42,9 +42,13 @@ cpu_arch="$(uname -m | sed 's/aarch/arm/' | sed 's/x86./amd/')"
 if [ "${cpu_arch}" == "amd64" ]; then
   eval "$(/usr/local/bin/brew shellenv | grep -v 'export PATH=')"
   export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin
+  boostinc="-I/usr/local/include"
+  boostld="-Z -L/usr/lib -L/usr/local/lib"
 else
   eval "$(/opt/homebrew/bin/brew shellenv | grep -v 'export PATH=')"
   export PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:/usr/sbin:/sbin
+  boostinc="-I/opt/homebrew/include"
+  boostld="-Z -L/usr/lib -L/opt/homebrew/lib"
 fi
 unset CXXFLAGS
 unset CPPFLAGS
@@ -61,10 +65,8 @@ wget "https://boostorg.jfrog.io/artifactory/main/release/${boost_version}/source
 tar -xzf "${boost_dir}.tar.gz"
 rm "${boost_dir}.tar.gz"
 cd "${boost_dir}"
-# hack to avoid conflicts with amd64 binaries already installed via homebrew
-[[ "${cpu_arch}" == "arm64" ]] && grep -lr 'usr/local' * | xargs perl -pi -e 's@/usr/local@/opt/homebrew@g'
 ./bootstrap.sh --prefix="${boostbrew}"
-./b2 --without-python --prefix="${boostbrew}" -j 4 link=shared runtime-link=shared install
+./b2 --without-python --prefix="${boostbrew}" -j 4 link=shared runtime-link=shared cxxflags="${boostinc}" linkflags="${boostld}" install
 cd ..
 if ! which -s swig || [ "$(swig -version | head -2 | tail -1 | cut -d' ' -f 3)" != "4.1.1" ]; then 
   if brew list swig; then
@@ -100,9 +102,9 @@ git checkout peernova
 export PATH=$PATH:"${destDir}/bin"
 CXXFLAS="-g -O2 -I${boostbrew}/include/boost -I${destDir}/include" ./configure --with-jdk-include=$(/usr/libexec/java_home -v11)/include --with-jdk-system-include=$(/usr/libexec/java_home -v11)/include/darwin  --disable-java-finalizer --prefix="${destDir}"
 make -C Java
-mkdir -p Java/libraries/darwin/${cpu_arch}
-cp Java/libQuantLibJNI.jnilib Java/libraries/darwin/${cpu_arch}
-cp ${destDir}/lib/libQuantLib.dylib Java/libraries/darwin/${cpu_arch}
+mkdir -p "${dstDir}/java"
+cp Java/libQuantLibJNI.jnilib "${destDir}/java"
+cp ${destDir}/lib/libQuantLib.dylib "${destDir}/java"
 EOF
 
 rm -rf /tmp/local
@@ -117,13 +119,19 @@ arch -x86_64 /bin/bash /tmp/localbuild.sh
 for p in amd64 arm64; do
   cd /tmp/libs/${p}
   tar -xzf quantlib.tgz
-  cp java/* /tmp/QuantLib-SWIG/Java/libraries/linux/${p}
+  mkdir -p "/tmp/QuantLib-SWIG/Java/libraries/linux/${p}"
+  cp java/* "/tmp/QuantLib-SWIG/Java/libraries/linux/${p}"
+  cp /tmp/local/${p}/java/* "/tmp/QuantLib-SWIG/Java/libraries/darwin/${p}"
 done
 
 cd /tmp/QuantLib-SWIG/Java
 jar cf $HOME/QunatLib.jar -C bin org libraries
 
+exit
+
 rm -rf /tmp/libs
+rm -rf /tmp/local
 rm -rf /tmp/localbuild.sh
 rm -rf /tmp/QuantLib
 rm -rf /tmp/QuantLib-SWIG
+rm -rf /tmp/boost*
