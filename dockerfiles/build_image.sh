@@ -27,24 +27,45 @@ docker system prune -f
 rm -rf /tmp/libs
 
 for p in amd64 arm64; do
-  docker build --platform linux/${p} -t ${repo}/qlbase:${p} -f pn.base.Dockerfile .
-  docker build --platform linux/${p} --build-arg="cpu_arch=${p}" -t ${repo}/quantlib:${p} -f pn.quantlib.Dockerfile .
+#  docker build --platform linux/${p} -t ${repo}/qlbase:${p} -f pn.base.Dockerfile .
+#  docker build --platform linux/${p} --build-arg="cpu_arch=${p}" -t ${repo}/quantlib:${p} -f pn.quantlib.Dockerfile .
   mkdir -p /tmp/libs/${p}
-  docker run -ti --mount type=bind,source=/tmp/libs/${p},target=/libs ${repo}/quantlib:${p} \
+  docker run -ti --platform linux/${p} --mount type=bind,source=/tmp/libs/${p},target=/libs ${repo}/quantlib:${p} \
      /bin/sh -c 'cp /quantlib.tgz /libs'
 done
 
 cat << 'EOF' >/tmp/localbuild.sh
 set -eux
-cpu_arch="$(unane -m | sed 's/aarch/arm/' | sed 's/x86./amd/')"
+boost_version=1.84.0
+boost_dir=boost_1_84_0
+cpu_arch="$(uname -m | sed 's/aarch/arm/' | sed 's/x86./amd/')"
 if [ "${cpu_arch}" == "amd64" ]; then
-  eval "$(/usr/local/bin/brew shellenv)"
+  eval "$(/usr/local/bin/brew shellenv | grep -v 'export PATH=')"
+  export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin
 else
-  eval "$(/opt/homebrew/bin/brew shellenv)"
+  eval "$(/opt/homebrew/bin/brew shellenv | grep -v 'export PATH=')"
+  export PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:/usr/sbin:/sbin
 fi
-brew install boost automake pcre2
-boostdir="$(brew --cellar boost)/$(brew list --version boost | tail -1 | cut -d' ' -f2)"
+unset CXXFLAGS
+unset CPPFLAGS
+unset LDFLAGS
+unset PKG_CONFIG_PATH
+brew install boost automake pcre2 wget icu4c xz zstd
+brew link m4 --force
+boostbrew="$(brew --cellar boost)/$(brew list --version boost | tail -1 | cut -d' ' -f2)"
+chmod -R +w "${boostbrew}"
 cd /tmp
+rm -f "${boost_dir}.*"
+rm -rf "${boost_dir}"
+wget "https://boostorg.jfrog.io/artifactory/main/release/${boost_version}/source/${boost_dir}.tar.gz"
+tar -xzf "${boost_dir}.tar.gz"
+rm "${boost_dir}.tar.gz"
+cd "${boost_dir}"
+# hack to avoid conflicts with amd64 binaries already installed via homebrew
+[[ "${cpu_arch}" == "arm64" ]] && grep -lr 'usr/local' * | xargs perl -pi -e 's@/usr/local@/opt/homebrew@g'
+./bootstrap.sh --prefix="${boostbrew}"
+./b2 --without-python --prefix="${boostbrew}" -j 4 link=shared runtime-link=shared install
+cd ..
 if ! which -s swig || [ "$(swig -version | head -2 | tail -1 | cut -d' ' -f 3)" != "4.1.1" ]; then 
   if brew list swig; then
     brew uninstall swig
@@ -54,7 +75,7 @@ if ! which -s swig || [ "$(swig -version | head -2 | tail -1 | cut -d' ' -f 3)" 
   cd swig
   git checkout v4.1.1;
   ./autogen.sh
-  ./configure --prefix=$(brew --prefix) --without-android --without-csharp --without-d --without-go --without-guile --without-javascript --without-lua --without-mzscheme --without-ocaml --without-octave --without-perl5 --without-php --without-r --without-ruby --without-scilab --without-tcl --with-boost=${boostdir}
+  ./configure --prefix=$(brew --prefix) --without-android --without-csharp --without-d --without-go --without-guile --without-javascript --without-lua --without-mzscheme --without-ocaml --without-octave --without-perl5 --without-php --without-r --without-ruby --without-scilab --without-tcl --with-boost=${boostbrew}
   make
   make install
   cd ..
@@ -64,9 +85,10 @@ rm -rf Quantlib
 git clone --recurse https://github.com/lballabio/QuantLib.git
 cd QuantLib
 git checkout v1.33
-mkdir -p /tmp/local
+destDir="/tmp/local/${cpu_arch}"
+mkdir -p "${destDir}"
 ./autogen.sh
-./configure --with-boost-include="${boostdir}/include" --prefix=/tmp/local --enable-sessions --enable-thread-safe-observer-pattern
+./configure --with-boost-include="${boostbrew}/include" --prefix="${destDir}" --enable-sessions --enable-thread-safe-observer-pattern
 make
 make install
 cd ..
@@ -75,27 +97,27 @@ git clone --recurse https://github.com/peernova/QuantLib-SWIG.git
 cd QuantLib-SWIG
 git checkout peernova
 ./autogen.sh
-export PATH=$PATH:/tmp/local/bin
-CXXFLAS="-g -O2 -I$boostdir/include/boost -I/tmp/local/include" ./configure --with-jdk-include=$(/usr/libexec/java_home -v11)/include --with-jdk-system-include=$(/usr/libexec/java_home -v11)/include/darwin  --disable-java-finalizer --prefix=/tmp/local
+export PATH=$PATH:"${destDir}/bin"
+CXXFLAS="-g -O2 -I${boostbrew}/include/boost -I${destDir}/include" ./configure --with-jdk-include=$(/usr/libexec/java_home -v11)/include --with-jdk-system-include=$(/usr/libexec/java_home -v11)/include/darwin  --disable-java-finalizer --prefix="${destDir}"
 make -C Java
 mkdir -p Java/libraries/darwin/${cpu_arch}
 cp Java/libQuantLibJNI.jnilib Java/libraries/darwin/${cpu_arch}
-cp /tmp/local/lib/libQuantLib.dylib Java/libraries/darwin/${cpu_arch}
+cp ${destDir}/lib/libQuantLib.dylib Java/libraries/darwin/${cpu_arch}
 EOF
 
-rm -rf /tmp/local
+#rm -rf /tmp/local
 
 # building darwin/arm64 binaries
 /bin/bash /tmp/localbuild.sh
 
 # building darwin/amd64 binaries
-arch -x86_64 /bin/bash /tmp/localbuild.sh
+#arch -x86_64 /bin/bash /tmp/localbuild.sh
 
 # combining all natives libraries as part of the jar
-for p amd64 arm64; do
+for p in amd64 arm64; do
   cd /tmp/libs/${p}
   tar -xzf quantlib.tgz
-  cp java/* /tmp/QuantLib-SWIG/Java/libraries/darwin/${p}
+  cp java/* /tmp/QuantLib-SWIG/Java/libraries/linux/${p}
 done
 
 cd /tmp/QuantLib-SWIG/Java
