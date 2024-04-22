@@ -22,8 +22,6 @@ fi
 
 repo=bfrancojr
 
-docker system prune -f
-
 rm -rf /tmp/libs
 
 for p in amd64 arm64; do
@@ -102,7 +100,7 @@ git checkout peernova
 export PATH=$PATH:"${destDir}/bin"
 CXXFLAS="-g -O2 -I${boostbrew}/include/boost -I${destDir}/include" ./configure --with-jdk-include=$(/usr/libexec/java_home -v11)/include --with-jdk-system-include=$(/usr/libexec/java_home -v11)/include/darwin  --disable-java-finalizer --prefix="${destDir}"
 make -C Java
-mkdir -p "${dstDir}/java"
+mkdir -p "${destDir}/java"
 cp Java/libQuantLibJNI.jnilib "${destDir}/java"
 cp ${destDir}/lib/libQuantLib.dylib "${destDir}/java"
 EOF
@@ -120,14 +118,14 @@ for p in amd64 arm64; do
   cd /tmp/libs/${p}
   tar -xzf quantlib.tgz
   mkdir -p "/tmp/QuantLib-SWIG/Java/libraries/linux/${p}"
-  cp java/* "/tmp/QuantLib-SWIG/Java/libraries/linux/${p}"
+  cp java/lib* "/tmp/QuantLib-SWIG/Java/libraries/linux/${p}"
+  cp lib/lib*.so "/tmp/QuantLib-SWIG/Java/libraries/linux/${p}"
+  mkdir -p "/tmp/QuantLib-SWIG/Java/libraries/darwin/${p}"
   cp /tmp/local/${p}/java/* "/tmp/QuantLib-SWIG/Java/libraries/darwin/${p}"
 done
 
 cd /tmp/QuantLib-SWIG/Java
-jar cf $HOME/QunatLib.jar -C bin org libraries
-
-exit
+jar cf $HOME/QuantLib.jar -C bin org libraries
 
 rm -rf /tmp/libs
 rm -rf /tmp/local
