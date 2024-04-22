@@ -2,10 +2,17 @@
 
 set -eux
 
+export quantlib_version=1.33
+
 if [ "$(uname -m)" != "arm64" ] && [ "$(uname -m)" != "aarch64" ]; then
   echo "this script requires a mac M1/M2 arm machine"
   exit 1
 fi
+
+if [ -z "GPG_PASSPHRASE" ]; then
+  echo "gpg passphrase environment variable is required"
+  exit 1
+end
 
 if ! which -s docker; then
   echo "docker is required"
@@ -84,7 +91,7 @@ fi
 rm -rf Quantlib
 git clone --recurse https://github.com/lballabio/QuantLib.git
 cd QuantLib
-git checkout v1.33
+git checkout "v${quantlib_version}"
 destDir="/tmp/local/${cpu_arch}"
 mkdir -p "${destDir}"
 ./autogen.sh
@@ -125,7 +132,21 @@ for p in amd64 arm64; do
 done
 
 cd /tmp/QuantLib-SWIG/Java
-jar cf $HOME/QuantLib.jar -C bin org libraries
+distDir="/tmp/dist"
+packageDir="${distDir}/io/peernova/maven/quantlib/${quantlib_version}"
+mkdir -p "${packageDir}"
+jar cf "${packageDir}/quantlib-${quantlib_version}.jar" -C bin org libraries
+javadoc -d docs org/quantlib/*
+jar cf "${packageDir}/quantlib-${quantlib_version}-javadoc.jar" -C docs .
+jar cf "${packageDir}/quantlib-${quantlib_version}-sources.jar" org
+cd "${packageDir}"
+for f in *.jar; do
+  cat "${f}" | md5 >"${f}.md5"
+  cat "${f}" | shasum | cut -d ' ' -f 1 >"${f}.sha1"
+  echo "${GPG_PASSPHRASE}" | gpg --armor --detach-sign --batch --yes --pinentry-mode=loopback --passphrase-fd 0 "${f}"
+done
+cd "${distDir}"
+zip -r "${HOME}/quantlib-${quantlib_version}".zip io
 
 rm -rf /tmp/libs
 rm -rf /tmp/local
