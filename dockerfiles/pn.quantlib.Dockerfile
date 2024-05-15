@@ -1,8 +1,9 @@
 
 ARG cpu_arch=amd64
-ARG quantlib_version=1.34
 
 FROM bfrancojr/qlbase:${cpu_arch} as build
+
+ARG quantlib_version=1.34
 
 RUN set -eux; \
     cd $HOME; \
