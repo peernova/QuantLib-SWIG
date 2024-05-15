@@ -22,6 +22,7 @@ RUN set -eux; \
 RUN set -eux; \
     cd $HOME/QuantLib-SWIG; \
     git checkout peernova; \
+    git remote add upstream https://github.com/lballabio/quantlib-SWIG; \
     git pull upstream "v${quantlib_version}"; \
     ./autogen.sh; \
     export PATH=$PATH:$HOME/local/bin; \
