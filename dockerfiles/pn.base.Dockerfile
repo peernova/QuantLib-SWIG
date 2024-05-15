@@ -1,7 +1,7 @@
 FROM debian:bookworm as build
 
-ARG boost_version=1.84.0
-ARG boost_dir=boost_1_84_0
+ARG boost_version=1.85.0
+ARG boost_dir=boost_1_85_0
 
 RUN set -eux; \
     apt update -y; \

@@ -2,7 +2,11 @@
 
 set -eux
 
-export quantlib_version=1.34
+quantlib_version=1.34
+boost_version=1.85.0
+boost_dir="$(echo "boost_${boost_version//./_}")"
+
+export quantlib_version boost_version boost_dir
 
 if [ "$(uname -m)" != "arm64" ] && [ "$(uname -m)" != "aarch64" ]; then
   echo "this script requires a mac M1/M2 arm machine"
@@ -32,8 +36,8 @@ repo=bfrancojr
 rm -rf /tmp/libs
 
 for p in amd64 arm64; do
-  docker build --platform linux/${p} -t ${repo}/qlbase:${p} -f pn.base.Dockerfile .
-  docker build --platform linux/${p} --build-arg="cpu_arch=${p}" -t ${repo}/quantlib:${p} -f pn.quantlib.Dockerfile .
+  docker build --platform linux/${p} -t ${repo}/qlbase:${p} --build-arg="boost_version=${boost_version}" --build-arg="boost_dir=${boost_dir}" -f pn.base.Dockerfile .
+  docker build --platform linux/${p} --build-arg="cpu_arch=${p}" -t ${repo}/quantlib:${p} --build-arg="quantlib_version=${quantlib_version}" -f pn.quantlib.Dockerfile .
   mkdir -p /tmp/libs/${p}
   docker run -ti --platform linux/${p} --mount type=bind,source=/tmp/libs/${p},target=/libs ${repo}/quantlib:${p} \
      /bin/sh -c 'cp /quantlib.tgz /libs'
@@ -41,8 +45,6 @@ done
 
 cat << 'EOF' >/tmp/localbuild.sh
 set -eux
-boost_version=1.85.0
-boost_dir=boost_1_85_0
 cpu_arch="$(uname -m | sed 's/aarch/arm/' | sed 's/x86./amd/')"
 if [ "${cpu_arch}" == "amd64" ]; then
   eval "$(/usr/local/bin/brew shellenv | grep -v 'export PATH=')"
@@ -103,6 +105,7 @@ rm -rf Quantlib-SWIG
 git clone --recurse https://github.com/peernova/QuantLib-SWIG.git
 cd QuantLib-SWIG
 git checkout peernova
+git pull upstream "v${quantlib_version" --ff
 ./autogen.sh
 export PATH=$PATH:"${destDir}/bin"
 CXXFLAS="-g -O2 -I${boostbrew}/include/boost -I${destDir}/include" ./configure --with-jdk-include=$(/usr/libexec/java_home -v11)/include --with-jdk-system-include=$(/usr/libexec/java_home -v11)/include/darwin  --disable-java-finalizer --prefix="${destDir}"
