@@ -1,18 +1,18 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -eux
 
-export quantlib_version=1.33
+export quantlib_version=1.34
 
 if [ "$(uname -m)" != "arm64" ] && [ "$(uname -m)" != "aarch64" ]; then
   echo "this script requires a mac M1/M2 arm machine"
   exit 1
 fi
 
-if [ -z "GPG_PASSPHRASE" ]; then
+if [ ! -v GPG_PASSPHRASE ] || [ -z "${GPG_PASSPHRASE}" ]; then
   echo "gpg passphrase environment variable is required"
   exit 1
-end
+fi
 
 if ! which -s docker; then
   echo "docker is required"
