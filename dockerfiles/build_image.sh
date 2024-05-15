@@ -41,8 +41,8 @@ done
 
 cat << 'EOF' >/tmp/localbuild.sh
 set -eux
-boost_version=1.84.0
-boost_dir=boost_1_84_0
+boost_version=1.85.0
+boost_dir=boost_1_85_0
 cpu_arch="$(uname -m | sed 's/aarch/arm/' | sed 's/x86./amd/')"
 if [ "${cpu_arch}" == "amd64" ]; then
   eval "$(/usr/local/bin/brew shellenv | grep -v 'export PATH=')"
