@@ -12,8 +12,9 @@ RUN set -eux; \
     cd QuantLib; \
     git checkout "v${quantlib_version}"; \
     mkdir -p $HOME/local; \
-    ./autogen.sh; \
-    ./configure --with-boost-include="/usr/include/boost" --prefix=$HOME/local --enable-sessions --enable-thread-safe-observer-pattern; \
+    mkdir build; \
+    cd build; \
+    cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DQL_ENABLE_SESSIONS=ON -DQL_ENABLE_THREAD_SAFE_OBSERVER_PATTERN=ON -DQL_BUILD_BENCHMARK=OFF -DQL_BUILD_EXAMPLES=OFF -DQL_BUILD_TEST_SUITE=OFF -DCMAKE_INSTALL_PREFIX=$HOME/local; \
     make; \
     make install; \
     [[ "$(uname)" == "Linux" ]] && patchelf --set-soname libQuantLib.so $HOME/local/lib/libQuantLib.so; \
