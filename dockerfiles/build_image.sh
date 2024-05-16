@@ -49,12 +49,12 @@ set -eux
 cpu_arch="$(uname -m | sed 's/aarch/arm/' | sed 's/x86./amd/')"
 if [ "${cpu_arch}" == "amd64" ]; then
   eval "$(/usr/local/bin/brew shellenv | grep -v 'export PATH=')"
-  export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin
+  export PATH=/usr/local/bin:/usr/local/opt/bison/bin:/usr/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin
   boostinc="-I/usr/local/include"
   boostld="-Z -L/usr/lib -L/usr/local/lib"
 else
   eval "$(/opt/homebrew/bin/brew shellenv | grep -v 'export PATH=')"
-  export PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:/usr/sbin:/sbin
+  export PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/opt/homebrew/opt/bison/bin:/usr/bin:/bin:/usr/sbin:/sbin
   boostinc="-I/opt/homebrew/include"
   boostld="-Z -L/usr/lib -L/opt/homebrew/lib"
 fi
@@ -62,9 +62,10 @@ unset CXXFLAGS
 unset CPPFLAGS
 unset LDFLAGS
 unset PKG_CONFIG_PATH
-brew install boost automake pcre2 wget icu4c xz zstd
+brew install boost automake pcre2 wget icu4c xz zstd llvm bison cmake
 brew link m4 --force
 boostbrew="$(brew --cellar boost)/$(brew list --version boost | tail -1 | cut -d' ' -f2)"
+export CXX="$(brew --cellar llvm)/$(brew list --version llvm | tail -1 | cut -d' ' -f2)/bin/clang++"
 chmod -R +w "${boostbrew}"
 cd /tmp
 rm -f "${boost_dir}.*"
@@ -111,7 +112,7 @@ git remote add upstream https://github.com/lballabio/quantlib-SWIG
 git pull upstream "v${quantlib_version}" --ff
 ./autogen.sh
 export PATH=$PATH:"${destDir}/bin"
-CXXFLAS="-g -O2 -I${boostbrew}/include/boost -I${destDir}/include" ./configure --with-jdk-include=$(/usr/libexec/java_home -v11)/include --with-jdk-system-include=$(/usr/libexec/java_home -v11)/include/darwin  --disable-java-finalizer --prefix="${destDir}"
+CXXFLAGS="-g -O2 -I${boostbrew}/include -I${destDir}/include" ./configure --with-jdk-include=$(/usr/libexec/java_home -v11)/include --with-jdk-system-include=$(/usr/libexec/java_home -v11)/include/darwin  --disable-java-finalizer --prefix="${destDir}"
 make -C Java
 mkdir -p "${destDir}/java"
 cp Java/libQuantLibJNI.jnilib "${destDir}/java"
