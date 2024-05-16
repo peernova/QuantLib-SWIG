@@ -85,7 +85,7 @@ if ! which -s swig || [ "$(swig -version | head -2 | tail -1 | cut -d' ' -f 3)" 
   cd swig
   git checkout "v${swig_version}"
   ./autogen.sh
-  ./configure --prefix=$(brew --prefix) --without-android --without-csharp --without-d --without-go --without-guile --without-javascript --without-lua --without-mzscheme --without-ocaml --without-octave --without-perl5 --without-php --without-r --without-ruby --without-scilab --without-tcl --with-boost=${boostbrew}
+  ./configure --prefix=$(brew --prefix) --without-android --without-csharp --without-d --without-go --without-guile --without-javascript --without-lua --without-mzscheme --without-ocaml --without-octave --without-perl5 --without-php --without-python --without-python3 --without-r --without-ruby --without-scilab --without-tcl --with-boost=${boostbrew}
   make
   make install
   cd ..
