@@ -4,9 +4,10 @@ set -eux
 
 quantlib_version=1.34
 boost_version=1.85.0
+swig_version=4.2.0
 boost_dir="$(echo "boost_${boost_version//./_}")"
 
-export quantlib_version boost_version boost_dir
+export quantlib_version boost_version boost_dir swig_version
 
 if [ "$(uname -m)" != "arm64" ] && [ "$(uname -m)" != "aarch64" ]; then
   echo "this script requires a mac M1/M2 arm machine"
@@ -36,7 +37,7 @@ repo=bfrancojr
 rm -rf /tmp/libs
 
 for p in amd64 arm64; do
-  docker build --platform linux/${p} -t ${repo}/qlbase:${p} --build-arg="boost_version=${boost_version}" --build-arg="boost_dir=${boost_dir}" -f pn.base.Dockerfile .
+  docker build --platform linux/${p} -t ${repo}/qlbase:${p} --build-arg="boost_version=${boost_version}" --build-arg="boost_dir=${boost_dir}" --build-arg="swig_version=${swig_version}" -f pn.base.Dockerfile .
   docker build --platform linux/${p} --build-arg="cpu_arch=${p}" -t ${repo}/quantlib:${p} --build-arg="quantlib_version=${quantlib_version}" -f pn.quantlib.Dockerfile .
   mkdir -p /tmp/libs/${p}
   docker run -ti --platform linux/${p} --mount type=bind,source=/tmp/libs/${p},target=/libs ${repo}/quantlib:${p} \
@@ -73,16 +74,16 @@ tar -xzf "${boost_dir}.tar.gz"
 rm "${boost_dir}.tar.gz"
 cd "${boost_dir}"
 ./bootstrap.sh --prefix="${boostbrew}"
-./b2 --without-python --prefix="${boostbrew}" -j 4 link=shared runtime-link=shared cxxflags="${boostinc}" linkflags="${boostld}" install
+./b2 boost.stacktrace.from_exception=off --without-python --prefix="${boostbrew}" -j 4 link=shared runtime-link=shared cxxflags="${boostinc}" linkflags="${boostld}" install
 cd ..
-if ! which -s swig || [ "$(swig -version | head -2 | tail -1 | cut -d' ' -f 3)" != "4.1.1" ]; then 
+if ! which -s swig || [ "$(swig -version | head -2 | tail -1 | cut -d' ' -f 3)" != "${swig_version}" ]; then
   if brew list swig; then
     brew uninstall swig
   fi
   rm -rf swig
   git clone https://github.com/swig/swig.git
   cd swig
-  git checkout v4.1.1;
+  git checkout "v${swig_version}"
   ./autogen.sh
   ./configure --prefix=$(brew --prefix) --without-android --without-csharp --without-d --without-go --without-guile --without-javascript --without-lua --without-mzscheme --without-ocaml --without-octave --without-perl5 --without-php --without-r --without-ruby --without-scilab --without-tcl --with-boost=${boostbrew}
   make
@@ -96,16 +97,18 @@ cd QuantLib
 git checkout "v${quantlib_version}"
 destDir="/tmp/local/${cpu_arch}"
 mkdir -p "${destDir}"
-./autogen.sh
-./configure --with-boost-include="${boostbrew}/include" --prefix="${destDir}" --enable-sessions --enable-thread-safe-observer-pattern
+mkdir -p build
+cd build
+cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DQL_ENABLE_SESSIONS=ON -DQL_ENABLE_THREAD_SAFE_OBSERVER_PATTERN=ON -DQL_BUILD_BENCHMARK=OFF -DQL_BUILD_EXAMPLES=OFF -DQL_BUILD_TEST_SUITE=OFF -DCMAKE_INSTALL_PREFIX="${destDir}"
 make
 make install
-cd ..
+cd ../..
 rm -rf Quantlib-SWIG
 git clone --recurse https://github.com/peernova/QuantLib-SWIG.git
 cd QuantLib-SWIG
 git checkout peernova
-git pull upstream "v${quantlib_version" --ff
+git remote add upstream https://github.com/lballabio/quantlib-SWIG
+git pull upstream "v${quantlib_version}" --ff
 ./autogen.sh
 export PATH=$PATH:"${destDir}/bin"
 CXXFLAS="-g -O2 -I${boostbrew}/include/boost -I${destDir}/include" ./configure --with-jdk-include=$(/usr/libexec/java_home -v11)/include --with-jdk-system-include=$(/usr/libexec/java_home -v11)/include/darwin  --disable-java-finalizer --prefix="${destDir}"

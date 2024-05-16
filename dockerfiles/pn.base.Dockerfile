@@ -2,6 +2,7 @@ FROM debian:bookworm as build
 
 ARG boost_version=1.85.0
 ARG boost_dir=boost_1_85_0
+ARG swig_version=4.2.0
 
 RUN set -eux; \
     apt update -y; \
@@ -20,7 +21,7 @@ RUN set -eux; \
     ./b2 boost.stacktrace.from_exception=off --without-python --prefix=/usr -j 4 link=shared runtime-link=shared install; \
     cd .. && rm -rf ${boost_dir} && /sbin/ldconfig; \
     cd swig; \
-    git checkout v4.1.1; \
+    git checkout "v${swig_version}"; \
     ./autogen.sh; \
     ./configure --prefix=/usr --without-android --without-csharp --without-d --without-go --without-guile --without-javascript --without-lua --without-mzscheme --without-ocaml --without-octave --without-perl5 --without-php --without-r --without-ruby --without-scilab --without-tcl --with-boost=/usr; \
     make; \
