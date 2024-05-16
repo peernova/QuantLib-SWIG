@@ -17,7 +17,7 @@ RUN set -eux; \
     rm ${boost_dir}.tar.gz; \
     cd ${boost_dir}; \
     ./bootstrap.sh; \
-    ./b2 --without-python --prefix=/usr -j 4 link=shared runtime-link=shared install; \
+    ./b2 boost.stacktrace.from_exception=off --without-python --prefix=/usr -j 4 link=shared runtime-link=shared install; \
     cd .. && rm -rf ${boost_dir} && /sbin/ldconfig; \
     cd swig; \
     git checkout v4.1.1; \
