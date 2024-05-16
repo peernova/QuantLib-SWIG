@@ -147,7 +147,46 @@ javadoc -d docs org/quantlib/*
 jar cf "${packageDir}/quantlib-${quantlib_version}-javadoc.jar" -C docs .
 jar cf "${packageDir}/quantlib-${quantlib_version}-sources.jar" org
 cd "${packageDir}"
-for f in *.jar; do
+
+cat << EOF >quantlib-${quantlib_version}.pom
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>io.peernova.maven</groupId>
+    <artifactId>quantlib</artifactId>
+    <version>${quantlib_version}</version>
+    <packaging>jar</packaging>
+
+    <name>QuantLib</name>
+    <description>QuantLib binding for Java.</description>
+    <url>https://github.com/peernova/quantLib-SWIG</url>
+
+    <licenses>
+        <license>
+            <name>QuantLib</name>
+            <url>https://github.com/peernova/quantLib-SWIG?tab=License-1-ov-file#readme</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Luigi Ballabio</name>
+            <email>luigi.ballabio@gmail.com</email>
+            <organization>QuantLib project</organization>
+            <organizationUrl>https://www.implementingquantlib.com</organizationUrl>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/peernova/quantLib-SWIG.git</connection>
+        <developerConnection>scm:git:ssh://github.com:peernova/QuantLib-SWIG.git</developerConnection>
+        <url>https://github.com/peernova/QuantLib-SWIG/tree/peernova</url>
+    </scm>
+</project>
+EOF
+
+for f in *.jar *.pom; do
   cat "${f}" | md5 >"${f}.md5"
   cat "${f}" | shasum | cut -d ' ' -f 1 >"${f}.sha1"
   echo "${GPG_PASSPHRASE}" | gpg --armor --detach-sign --batch --yes --pinentry-mode=loopback --passphrase-fd 0 "${f}"
