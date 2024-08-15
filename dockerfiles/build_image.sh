@@ -2,7 +2,7 @@
 
 set -eux
 
-quantlib_version=1.34
+quantlib_version=1.35
 boost_version=1.85.0
 swig_version=4.2.0
 boost_dir="$(echo "boost_${boost_version//./_}")"
