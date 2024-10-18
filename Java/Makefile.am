@@ -63,6 +63,7 @@ endif
 
 quantlib_wrap.cpp: ../SWIG/*.i QuantLibJNI.patch
 	mkdir -p org/quantlib
+	rm -f org/quantlib/*.java
 	$(SWIG) $(SWIGFLAGS) -java -c++ -outdir org/quantlib \
             -package org.quantlib -o quantlib_wrap.cpp ../SWIG/quantlib.i
 	patch org/quantlib/QuantLibJNI.java <QuantLibJNI.patch
