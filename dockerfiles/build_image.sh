@@ -9,27 +9,52 @@ boost_dir="$(echo "boost_${boost_version//./_}")"
 
 export quantlib_version boost_version boost_dir swig_version
 
-if [ "$(uname -m)" != "arm64" ] && [ "$(uname -m)" != "aarch64" ]; then
-  echo "this script requires a mac M1/M2 arm machine"
-  exit 1
+# Check if running on macOS
+if [ "$(uname)" != "Darwin" ]; then
+    echo "Error: This script requires macOS."
+    exit 1
 fi
+
+# Check if running on ARM architecture
+if [ "$(uname -m)" != "arm64" ] && [ "$(uname -m)" != "aarch64" ]; then
+    echo "Error: This script requires a Mac with Apple Silicon (M1/M2/M3)."
+    echo "Current architecture: $(uname -m)"
+    exit 1
+fi
+
+echo "Running on Apple Silicon Mac. Proceeding with the script..."
 
 if [ ! -v GPG_PASSPHRASE ] || [ -z "${GPG_PASSPHRASE}" ]; then
-  echo "gpg passphrase environment variable is required"
+  echo "GPG passphrase environment variable is required."
   exit 1
 fi
 
-if ! which -s docker; then
-  echo "docker is required"
-  exit 1
+docker_command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+if docker_command_exists docker; then
+    echo "Docker is installed."
+    docker --version
+else
+    echo "Docker is not installed but it is required."
+    exit 1
 fi
 
+# Check and install ARM64 Homebrew if not present
 if [ ! -f /opt/homebrew/bin/brew ]; then
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    echo "ARM64 Homebrew not found. Installing..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+else
+    echo "ARM64 Homebrew is already installed."
 fi
 
+# Check and install AMD64 Homebrew if not present
 if [ ! -f /usr/local/bin/brew ]; then
+  echo "AMD64 Homebrew not found. Installing..."
   arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+else
+    echo "AMD64 Homebrew is already installed."
 fi
 
 repo=bfrancojr
@@ -62,7 +87,7 @@ unset CXXFLAGS
 unset CPPFLAGS
 unset LDFLAGS
 unset PKG_CONFIG_PATH
-brew install boost automake pcre2 wget icu4c xz zstd llvm bison cmake
+brew install boost automake pcre2 wget icu4c xz zstd llvm bison cmake m4
 brew link m4 --force
 boostbrew="$(brew --cellar boost)/$(brew list --version boost | tail -1 | cut -d' ' -f2)"
 export CXX="$(brew --cellar llvm)/$(brew list --version llvm | tail -1 | cut -d' ' -f2)/bin/clang++"
@@ -122,12 +147,15 @@ EOF
 rm -rf /tmp/local
 
 # building darwin/arm64 binaries
+echo "Building darwin/arm64 binaries..."
 /bin/bash /tmp/localbuild.sh
 
 # building darwin/amd64 binaries
-arch -x86_64 /bin/bash /tmp/localbuild.sh
+echo "Building darwin/amd64 binaries..."
+echo "exit" | arch -x86_64 /bin/bash /tmp/localbuild.sh
 
 # combining all natives libraries as part of the jar
+echo "Combining all natives libraries as part of the jar..."
 for p in amd64 arm64; do
   cd /tmp/libs/${p}
   tar -xzf quantlib.tgz
