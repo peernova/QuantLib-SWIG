@@ -152,7 +152,7 @@ echo "Building darwin/arm64 binaries..."
 
 # building darwin/amd64 binaries
 echo "Building darwin/amd64 binaries..."
-echo "exit" | arch -x86_64 /bin/bash /tmp/localbuild.sh
+arch -x86_64 /bin/bash /tmp/localbuild.sh
 
 # combining all natives libraries as part of the jar
 echo "Combining all natives libraries as part of the jar..."
