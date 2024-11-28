@@ -36,7 +36,7 @@ RUN set -eux; \
     cd $HOME/local; \
     tar czf ../quantlib.tgz .
 
-FROM --platform=$BUILDPLATFORM debian:bookworm
+FROM --platform=linux/${cpu_arch} debian:bookworm
 
 COPY --from=build /root/quantlib.tgz /
 

@@ -59,17 +59,17 @@ fi
 
 repo=bfrancojr
 
-rm -rf /tmp/libs
+rm -rf $HOME/tmp/libs
 
 for p in amd64 arm64; do
-  docker build --platform linux/${p} -t ${repo}/qlbase:${p} --build-arg="boost_version=${boost_version}" --build-arg="boost_dir=${boost_dir}" --build-arg="swig_version=${swig_version}" -f pn.base.Dockerfile .
-  docker build --platform linux/${p} --build-arg="cpu_arch=${p}" -t ${repo}/quantlib:${p} --build-arg="quantlib_version=${quantlib_version}" -f pn.quantlib.Dockerfile .
-  mkdir -p /tmp/libs/${p}
-  docker run -ti --platform linux/${p} --mount type=bind,source=/tmp/libs/${p},target=/libs ${repo}/quantlib:${p} \
-     /bin/sh -c 'cp /quantlib.tgz /libs'
+  docker build --platform linux/${p} -t ${repo}/qlbase:${p} --build-arg="boost_version=$boost_version" --build-arg="boost_dir=$boost_dir" --build-arg="swig_version=$swig_version" -f pn.base.Dockerfile .
+  docker build --platform linux/${p} --build-arg="cpu_arch=${p}" -t ${repo}/quantlib:${p} --build-arg="quantlib_version=$quantlib_version" -f pn.quantlib.Dockerfile .
+  mkdir -p $HOME/tmp/libs/${p}
+  docker run -ti --platform linux/${p} --mount type=bind,source=$HOME/tmp/libs/${p},target=/libs ${repo}/quantlib:${p} /bin/sh -c 'cp /quantlib.tgz /libs'
 done
 
-cat << 'EOF' >/tmp/localbuild.sh
+cat << 'EOF' >$HOME/tmp/localbuild.sh
+#!/usr/bin/env bash
 set -eux
 cpu_arch="$(uname -m | sed 's/aarch/arm/' | sed 's/x86./amd/')"
 if [ "${cpu_arch}" == "amd64" ]; then
@@ -92,13 +92,13 @@ brew link m4 --force
 boostbrew="$(brew --cellar boost)/$(brew list --version boost | tail -1 | cut -d' ' -f2)"
 export CXX="$(brew --cellar llvm)/$(brew list --version llvm | tail -1 | cut -d' ' -f2)/bin/clang++"
 chmod -R +w "${boostbrew}"
-cd /tmp
-rm -f "${boost_dir}.*"
-rm -rf "${boost_dir}"
-wget "https://boostorg.jfrog.io/artifactory/main/release/${boost_version}/source/${boost_dir}.tar.gz"
-tar -xzf "${boost_dir}.tar.gz"
-rm "${boost_dir}.tar.gz"
-cd "${boost_dir}"
+cd $HOME/tmp
+rm -f "$boost_dir.*"
+rm -rf "$boost_dir"
+wget "https://boostorg.jfrog.io/artifactory/main/release/${boost_version}/source/$boost_dir.tar.gz"
+tar -xzf "$boost_dir.tar.gz"
+rm "$boost_dir.tar.gz"
+cd "$boost_dir"
 ./bootstrap.sh --prefix="${boostbrew}"
 ./b2 boost.stacktrace.from_exception=off --without-python --prefix="${boostbrew}" -j 4 link=shared runtime-link=shared cxxflags="${boostinc}" linkflags="${boostld}" install
 cd ..
@@ -121,7 +121,7 @@ rm -rf Quantlib
 git clone --recurse https://github.com/lballabio/QuantLib.git
 cd QuantLib
 git checkout "v${quantlib_version}"
-destDir="/tmp/local/${cpu_arch}"
+destDir="$HOME/tmp/local/${cpu_arch}"
 mkdir -p "${destDir}"
 mkdir -p build
 cd build
@@ -144,30 +144,31 @@ cp Java/libQuantLibJNI.jnilib "${destDir}/java"
 cp ${destDir}/lib/libQuantLib.dylib "${destDir}/java"
 EOF
 
-rm -rf /tmp/local
+chmod +x $HOME/tmp/localbuild.sh
+rm -rf $HOME/tmp/local
 
 # building darwin/arm64 binaries
 echo "Building darwin/arm64 binaries..."
-/bin/bash /tmp/localbuild.sh
+/bin/bash -c "$HOME/tmp/localbuild.sh"
 
 # building darwin/amd64 binaries
 echo "Building darwin/amd64 binaries..."
-arch -x86_64 /bin/bash /tmp/localbuild.sh
+arch -x86_64 /bin/bash -c "$HOME/tmp/localbuild.sh"
 
 # combining all natives libraries as part of the jar
 echo "Combining all natives libraries as part of the jar..."
 for p in amd64 arm64; do
-  cd /tmp/libs/${p}
+  cd $HOME/tmp/libs/${p}
   tar -xzf quantlib.tgz
-  mkdir -p "/tmp/QuantLib-SWIG/Java/libraries/linux/${p}"
-  cp java/lib* "/tmp/QuantLib-SWIG/Java/libraries/linux/${p}"
-  cp lib/lib*.so "/tmp/QuantLib-SWIG/Java/libraries/linux/${p}"
-  mkdir -p "/tmp/QuantLib-SWIG/Java/libraries/darwin/${p}"
-  cp /tmp/local/${p}/java/* "/tmp/QuantLib-SWIG/Java/libraries/darwin/${p}"
+  mkdir -p "$HOME/tmp/QuantLib-SWIG/Java/libraries/linux/${p}"
+  cp java/lib* "$HOME/tmp/QuantLib-SWIG/Java/libraries/linux/${p}"
+  cp lib/lib*.so "$HOME/tmp/QuantLib-SWIG/Java/libraries/linux/${p}"
+  mkdir -p "$HOME/tmp/QuantLib-SWIG/Java/libraries/darwin/${p}"
+  cp $HOME/tmp/local/${p}/java/* "$HOME/tmp/QuantLib-SWIG/Java/libraries/darwin/${p}"
 done
 
-cd /tmp/QuantLib-SWIG/Java
-distDir="/tmp/dist"
+cd $HOME/tmp/QuantLib-SWIG/Java
+distDir="$HOME/tmp/dist"
 packageDir="${distDir}/io/peernova/maven/quantlib/${quantlib_version}"
 mkdir -p "${packageDir}"
 jar cf "${packageDir}/quantlib-${quantlib_version}.jar" -C bin org libraries
@@ -222,9 +223,9 @@ done
 cd "${distDir}"
 zip -r "${HOME}/quantlib-${quantlib_version}".zip io
 
-rm -rf /tmp/libs
-rm -rf /tmp/local
-rm -rf /tmp/localbuild.sh
-rm -rf /tmp/QuantLib
-rm -rf /tmp/QuantLib-SWIG
-rm -rf /tmp/boost*
+rm -rf $HOME/tmp/libs
+rm -rf $HOME/tmp/local
+rm -rf $HOME/tmp/localbuild.sh
+rm -rf $HOME/tmp/QuantLib
+rm -rf $HOME/tmp/QuantLib-SWIG
+rm -rf $HOME/tmp/boost*
