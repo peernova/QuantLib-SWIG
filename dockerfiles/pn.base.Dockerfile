@@ -1,17 +1,22 @@
 FROM debian:bookworm as build
 
-ARG boost_version=1.85.0
-ARG boost_dir=boost_1_85_0
+ENV MAKEFLAGS="-j6"
+ENV CXXFLAGS="-O1"
+ENV CFLAGS="-O1"
+ENV LINCFLAGS="-O1"
+ENV CXXFLAGS="-fvisibility=default"
+
+ARG boost_version=1.86.0
+ARG boost_dir=boost_1_86_0
 ARG swig_version=4.2.0
 
 RUN set -eux; \
-    apt update -y; \
-    apt install -y wget gpg cmake; \
-    ulimit -c unlimited; \
+    apt update; \
+    apt install -y wget gpg make cmake; \
     wget -O - https://apt.corretto.aws/corretto.key | gpg --dearmor -o /usr/share/keyrings/corretto-keyring.gpg; \
     echo "deb [signed-by=/usr/share/keyrings/corretto-keyring.gpg] https://apt.corretto.aws stable main" | tee /etc/apt/sources.list.d/corretto.list; \
-    apt update -y; \
-    apt install -y git make libtool automake libpcre2-dev bison patchelf java-11-amazon-corretto-jdk libicu-dev gcc g++; \
+    apt update; \
+    apt install -y git make libtool automake libpcre2-dev bison patchelf java-11-amazon-corretto-jdk libicu-dev gcc g++ libtool autoconf graphviz build-essential libboost-all-dev libstdc++-12-dev; \
     cd $HOME; \
     git clone https://github.com/swig/swig.git; \
     wget https://boostorg.jfrog.io/artifactory/main/release/${boost_version}/source/${boost_dir}.tar.gz; \

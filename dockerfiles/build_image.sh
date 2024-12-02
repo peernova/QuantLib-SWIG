@@ -24,10 +24,12 @@ fi
 
 echo "Running on Apple Silicon Mac. Proceeding with the script..."
 
-if [ ! -v GPG_PASSPHRASE ] || [ -z "${GPG_PASSPHRASE}" ]; then
+if [ -z "${GPG_PASSPHRASE}" ]; then
   echo "GPG passphrase environment variable is required."
   exit 1
 fi
+
+echo "Passphrase length: ${#GPG_PASSPHRASE}"  # This will show length only
 
 docker_command_exists() {
     command -v "$1" >/dev/null 2>&1
@@ -62,13 +64,13 @@ repo=bfrancojr
 rm -rf $HOME/tmp/libs
 
 for p in amd64 arm64; do
-  docker build --platform linux/${p} -t ${repo}/qlbase:${p} --build-arg="boost_version=$boost_version" --build-arg="boost_dir=$boost_dir" --build-arg="swig_version=$swig_version" -f pn.base.Dockerfile .
-  docker build --platform linux/${p} --build-arg="cpu_arch=${p}" -t ${repo}/quantlib:${p} --build-arg="quantlib_version=$quantlib_version" -f pn.quantlib.Dockerfile .
+  docker buildx build --platform linux/${p} -t ${repo}/qlbase:${p} --build-arg="boost_version=$boost_version" --build-arg="boost_dir=$boost_dir" --build-arg="swig_version=$swig_version" -f pn.base.Dockerfile .
+  docker buildx build --platform linux/${p} --build-arg="cpu_arch=${p}" -t ${repo}/quantlib:${p} --build-arg="quantlib_version=$quantlib_version" -f pn.quantlib.Dockerfile .
   mkdir -p $HOME/tmp/libs/${p}
   docker run -ti --platform linux/${p} --mount type=bind,source=$HOME/tmp/libs/${p},target=/libs ${repo}/quantlib:${p} /bin/sh -c 'cp /quantlib.tgz /libs'
 done
 
-cat << 'EOF' >$HOME/tmp/localbuild.sh
+cat << 'EOF' > $HOME/tmp/localbuild.sh
 #!/usr/bin/env bash
 set -eux
 cpu_arch="$(uname -m | sed 's/aarch/arm/' | sed 's/x86./amd/')"
@@ -220,6 +222,7 @@ for f in *.jar *.pom; do
   cat "${f}" | shasum | cut -d ' ' -f 1 >"${f}.sha1"
   echo "${GPG_PASSPHRASE}" | gpg --armor --detach-sign --batch --yes --pinentry-mode=loopback --passphrase-fd 0 "${f}"
 done
+
 cd "${distDir}"
 zip -r "${HOME}/quantlib-${quantlib_version}".zip io
 
