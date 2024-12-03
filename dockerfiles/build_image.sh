@@ -2,6 +2,8 @@
 
 set -eux
 
+# Default values
+ci=${ci:-false}
 quantlib_version=1.36
 boost_version=1.86.0
 swig_version=4.2.0
@@ -62,9 +64,6 @@ fi
 repo=bfrancojr
 
 rm -rf $HOME/tmp/libs
-
-# Default value
-ci=false
 
 if [ "$ci" = true ]; then
   for p in amd64 arm64; do
@@ -244,3 +243,4 @@ rm -rf $HOME/tmp/localbuild.sh
 rm -rf $HOME/tmp/QuantLib
 rm -rf $HOME/tmp/QuantLib-SWIG
 rm -rf $HOME/tmp/boost*
+

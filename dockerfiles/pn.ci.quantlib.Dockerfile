@@ -3,13 +3,8 @@ ARG cpu_arch=amd64
 
 FROM bfrancojr/qlbase:${cpu_arch} as build
 
-ENV MAKEFLAGS="-j2"
-
-RUN if [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]; then \
-    export CXXFLAGS="-O2 -fvisibility=default -march=armv8-a -mtune=generic"; \
-    else \
-    export CXXFLAGS="-O2 -fvisibility=default -march=x86-64 -mtune=generic"; \
-    fi
+ENV MAKEFLAGS="-j1"
+ENV CXXFLAGS="-O1 -fvisibility=default -march=x86-64 -mtune=generic"
 
 ARG quantlib_version=1.36
 
@@ -21,29 +16,22 @@ RUN set -eux; \
     mkdir -p $HOME/local; \
     mkdir build; \
     cd build; \
-    # Set architecture-specific flags during cmake configuration
-    if [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]; then \
-        cmake .. -G "Unix Makefiles" \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_CXX_FLAGS="-O2 -march=armv8-a" \
-        -DQL_ENABLE_SESSIONS=ON \
-        -DQL_ENABLE_THREAD_SAFE_OBSERVER_PATTERN=ON \
-        -DQL_BUILD_BENCHMARK=OFF \
-        -DQL_BUILD_EXAMPLES=OFF \
-        -DQL_BUILD_TEST_SUITE=OFF \
-        -DCMAKE_INSTALL_PREFIX=$HOME/local; \
+    ARCH=$(uname -m); \
+    if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then \
+        ARCH_FLAGS="-march=armv8-a"; \
     else \
-        cmake .. -G "Unix Makefiles" \
+        ARCH_FLAGS="-march=x86-64"; \
+    fi; \
+    cmake .. -G "Unix Makefiles" \
         -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_CXX_FLAGS="-O2 -march=x86-64" \
+        -DCMAKE_CXX_FLAGS="-O0 ${ARCH_FLAGS} -mtune=generic" \
         -DQL_ENABLE_SESSIONS=ON \
         -DQL_ENABLE_THREAD_SAFE_OBSERVER_PATTERN=ON \
         -DQL_BUILD_BENCHMARK=OFF \
         -DQL_BUILD_EXAMPLES=OFF \
         -DQL_BUILD_TEST_SUITE=OFF \
         -DCMAKE_INSTALL_PREFIX=$HOME/local; \
-    fi; \
-    make; \
+    make -j$(nproc); \
     make install; \
     [[ "$(uname)" == "Linux" ]] && patchelf --set-soname libQuantLib.so $HOME/local/lib/libQuantLib.so; \
     /sbin/ldconfig $HOME/local/lib
@@ -74,3 +62,4 @@ FROM --platform=linux/${cpu_arch} debian:bookworm
 COPY --from=build /root/quantlib.tgz /
 
 CMD [ "bash" ]
+
