@@ -3,8 +3,8 @@ ARG cpu_arch=amd64
 
 FROM bfrancojr/qlbase:${cpu_arch} as build
 
+ENV CXXFLAGS="-O0 -fvisibility=default -march=x86-64 -mtune=generic"
 ENV MAKEFLAGS="-j1"
-ENV CXXFLAGS="-O1 -fvisibility=default -march=x86-64 -mtune=generic"
 
 ARG quantlib_version=1.36
 
@@ -31,7 +31,7 @@ RUN set -eux; \
         -DQL_BUILD_EXAMPLES=OFF \
         -DQL_BUILD_TEST_SUITE=OFF \
         -DCMAKE_INSTALL_PREFIX=$HOME/local; \
-    make -j$(nproc); \
+    make -j1; \
     make install; \
     [[ "$(uname)" == "Linux" ]] && patchelf --set-soname libQuantLib.so $HOME/local/lib/libQuantLib.so; \
     /sbin/ldconfig $HOME/local/lib
@@ -49,7 +49,7 @@ RUN set -eux; \
     cd Java; \
     mkdir -p org/quantlib; \
     swig -DJAVA_AUTOLOAD -java -c++ -outdir org/quantlib -package org.quantlib -o quantlib_wrap.cpp ../SWIG/quantlib.i; \
-    make; \
+    make -j1; \
     mkdir -p $HOME/local/java; \
     cp libQuantLibJNI.* QuantLib.jar $HOME/local/java
 
