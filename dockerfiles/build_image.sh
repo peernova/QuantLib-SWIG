@@ -67,8 +67,8 @@ rm -rf $HOME/tmp/libs
 
 if [ "$ci" = true ]; then
   for p in amd64 arm64; do
-    docker buildx build --memory=12g --platform linux/${p} -t ${repo}/qlbase:${p} --build-arg="boost_version=$boost_version" --build-arg="boost_dir=$boost_dir" --build-arg="swig_version=$swig_version" -f pn.ci.base.Dockerfile .
-    docker buildx build --memory=12g --platform linux/${p} --build-arg="cpu_arch=${p}" -t ${repo}/quantlib:${p} --build-arg="quantlib_version=$quantlib_version" -f pn.ci.quantlib.Dockerfile .
+    docker buildx build --memory=8g --memory-swap=4g --platform linux/${p} -t ${repo}/qlbase:${p} --build-arg="boost_version=$boost_version" --build-arg="boost_dir=$boost_dir" --build-arg="swig_version=$swig_version" -f pn.ci.base.Dockerfile .
+    docker buildx build --memory=8g --memory-swap=4g --platform linux/${p} --build-arg="cpu_arch=${p}" -t ${repo}/quantlib:${p} --build-arg="quantlib_version=$quantlib_version" -f pn.ci.quantlib.Dockerfile .
     mkdir -p $HOME/tmp/libs/${p}
     docker run -ti --platform linux/${p} --mount type=bind,source=$HOME/tmp/libs/${p},target=/libs ${repo}/quantlib:${p} /bin/sh -c 'cp /quantlib.tgz /libs'
   done
