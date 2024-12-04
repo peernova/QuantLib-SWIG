@@ -1,4 +1,4 @@
-FROM debian:bookworm as build
+FROM debian:bookworm AS build
 
 ENV MAKEFLAGS="-j1"
 ENV CXXFLAGS="-O0 -fvisibility=default -fno-inline -fno-omit-frame-pointer"
@@ -13,6 +13,7 @@ ARG swig_version=4.2.0
 RUN set -eux; \
     apt update; \
     apt install -y wget gpg make cmake; \
+    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys A122542AB04F24E3; \
     wget -O - https://apt.corretto.aws/corretto.key | gpg --dearmor -o /usr/share/keyrings/corretto-keyring.gpg; \
     echo "deb [signed-by=/usr/share/keyrings/corretto-keyring.gpg] https://apt.corretto.aws stable main" | tee /etc/apt/sources.list.d/corretto.list; \
     apt update; \
@@ -23,23 +24,15 @@ RUN set -eux; \
     tar xfz ${boost_dir}.tar.gz; \
     rm ${boost_dir}.tar.gz; \
     cd ${boost_dir}; \
-    ./bootstrap.sh --prefix=/usr; \
+    ./bootstrap.sh; \
     ./b2 \
-        --with-system \
-        --with-filesystem \
-        --with-date_time \
-        --with-thread \
-        --with-regex \
-        boost.stacktrace.from_exception=off \
-        --prefix=/usr \
-        -j1 \
-        link=shared \
-        runtime-link=shared \
-        threading=multi \
-        variant=release \
-        debug-symbols=off \
-        cxxflags="-O0 -fno-inline" \
-        install; \
+    boost.stacktrace.from_exception=off \
+    --without-python \
+    --prefix=/usr \
+    -j1 \
+    link=shared \
+    runtime-link=shared \
+    install; \
     cd .. && rm -rf ${boost_dir} && /sbin/ldconfig; \
     cd swig; \
     git checkout "v${swig_version}"; \
