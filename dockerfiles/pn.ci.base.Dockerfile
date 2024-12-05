@@ -1,9 +1,8 @@
 FROM debian:bookworm AS build
 
 ENV MAKEFLAGS="-j1"
-ENV CXXFLAGS="-O0 -fvisibility=default -fno-inline -fno-omit-frame-pointer"
-ENV CFLAGS="-O0"
-ENV LINCFLAGS="-O0"
+ENV CXXFLAGS="-O1 -g -fno-strict-aliasing"
+ENV CFLAGS="-O1 -g"
 ENV LDFLAGS="-Wl,--no-as-needed -ldl"
 
 ARG boost_version=1.86.0
@@ -24,15 +23,20 @@ RUN set -eux; \
     tar xfz ${boost_dir}.tar.gz; \
     rm ${boost_dir}.tar.gz; \
     cd ${boost_dir}; \
-    ./bootstrap.sh; \
+    ./bootstrap.sh --with-toolset=gcc; \
     ulimit -n 4096; \
+    ulimit -s 16384; \
     ./b2 \
+        -j1 \
         boost.stacktrace.from_exception=off \
         --without-python \
         --prefix=/usr \
-        -j1 \
+        variant=release \
+        debug-symbols=off \
         link=shared \
         runtime-link=shared \
+        threading=multi \
+        --layout=system \
         install; \
     cd .. && rm -rf ${boost_dir} && /sbin/ldconfig
 
@@ -50,7 +54,7 @@ RUN set -eux; \
         --without-octave --without-perl5 --without-php \
         --without-python --without-python3 --without-r \
         --without-ruby --without-scilab --without-tcl \
-        --with-boost=/usr && \
+        --with-boost=/usr; \
     make -j1; \
     make install; \
     cd .. && rm -rf swig
