@@ -49,6 +49,8 @@ RUN set -eux; \
     git checkout "v${swig_version}"; \
     ulimit -n 4096; \
     ./autogen.sh; \
+    export CFLAGS="-O0 -g"; \
+    export CXXFLAGS="-O0 -g"; \
     ./configure --prefix=/usr \
         --without-android --without-csharp --without-d \
         --without-go --without-guile --without-javascript \
