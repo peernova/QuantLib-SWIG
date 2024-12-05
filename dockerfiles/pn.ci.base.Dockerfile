@@ -1,9 +1,8 @@
 FROM debian:bookworm AS build
 
 ENV MAKEFLAGS="-j1"
-ENV CXXFLAGS="-O1 -g -fno-strict-aliasing"
-ENV CFLAGS="-O1 -g"
-ENV LDFLAGS="-Wl,--no-as-needed -ldl"
+ENV CXXFLAGS="-O0 -g"
+ENV CFLAGS="-O0 -g"
 
 ARG boost_version=1.86.0
 ARG boost_dir=boost_1_86_0
@@ -16,16 +15,19 @@ RUN set -eux; \
     wget -O - https://apt.corretto.aws/corretto.key | gpg --dearmor -o /usr/share/keyrings/corretto-keyring.gpg; \
     echo "deb [signed-by=/usr/share/keyrings/corretto-keyring.gpg] https://apt.corretto.aws stable main" | tee /etc/apt/sources.list.d/corretto.list; \
     apt update; \
-    apt install -y git libtool automake libpcre2-dev bison patchelf java-11-amazon-corretto-jdk libicu-dev gcc g++ graphviz build-essential libboost-all-dev libstdc++-12-dev
+    apt install -y git libtool automake libpcre2-dev bison patchelf java-11-amazon-corretto-jdk libicu-dev gcc g++ graphviz build-essential libboost-all-dev libstdc++-12-dev; \
+    rm -rf /var/lib/apt/lists/*
 
 RUN set -eux; \
     wget https://boostorg.jfrog.io/artifactory/main/release/${boost_version}/source/${boost_dir}.tar.gz; \
     tar xfz ${boost_dir}.tar.gz; \
     rm ${boost_dir}.tar.gz; \
     cd ${boost_dir}; \
-    ./bootstrap.sh --with-toolset=gcc; \
+    sed -i 's/-O2/-O0/g' bootstrap.sh; \
+    sed -i 's/-O3/-O0/g' bootstrap.sh; \
+    ulimit -s unlimited; \
     ulimit -n 4096; \
-    ulimit -s 16384; \
+    ./bootstrap.sh --with-toolset=gcc --without-icu; \
     ./b2 \
         -j1 \
         boost.stacktrace.from_exception=off \
@@ -37,6 +39,7 @@ RUN set -eux; \
         runtime-link=shared \
         threading=multi \
         --layout=system \
+        optimization=space \
         install; \
     cd .. && rm -rf ${boost_dir} && /sbin/ldconfig
 
