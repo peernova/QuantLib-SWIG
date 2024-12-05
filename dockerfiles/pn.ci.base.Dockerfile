@@ -9,13 +9,16 @@ ARG boost_dir=boost_1_86_0
 ARG swig_version=4.2.0
 
 RUN set -eux; \
-    apt update; \
-    apt install -y wget gpg cmake make; \
+    apt update && apt install -y wget gpg cmake make build-essential libbz2-dev libzstd-dev liblzma-dev; \
     apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys A122542AB04F24E3; \
     wget -O - https://apt.corretto.aws/corretto.key | gpg --dearmor -o /usr/share/keyrings/corretto-keyring.gpg; \
     echo "deb [signed-by=/usr/share/keyrings/corretto-keyring.gpg] https://apt.corretto.aws stable main" | tee /etc/apt/sources.list.d/corretto.list; \
-    apt update; \
-    apt install -y git libtool automake libpcre2-dev bison patchelf java-11-amazon-corretto-jdk libicu-dev gcc g++ graphviz build-essential libboost-all-dev libstdc++-12-dev; \
+    apt update && apt install -y \
+    git libtool automake \
+    libpcre2-dev bison patchelf \
+    java-11-amazon-corretto-jdk \
+    libicu-dev gcc g++ graphviz \
+    zlib1g-dev libboost-all-dev libstdc++-12-dev; \
     rm -rf /var/lib/apt/lists/*
 
 RUN set -eux; \
@@ -27,19 +30,15 @@ RUN set -eux; \
     sed -i 's/-O3/-O0/g' bootstrap.sh; \
     ulimit -s unlimited; \
     ulimit -n 4096; \
-    ./bootstrap.sh --with-toolset=gcc --without-icu; \
-    ./b2 \
-        -j1 \
-        boost.stacktrace.from_exception=off \
+    ./bootstrap.sh; \
+    ./b2 boost.stacktrace.from_exception=off \
         --without-python \
         --prefix=/usr \
-        variant=release \
-        debug-symbols=off \
-        link=shared \
+        -j4 \
+        link=shared \ 
         runtime-link=shared \
-        threading=multi \
-        --layout=system \
-        optimization=space \
+        cxxflags="-O0 -g" \
+        linkflags="-Wl,--no-as-needed" \
         install; \
     cd .. && rm -rf ${boost_dir} && /sbin/ldconfig
 
