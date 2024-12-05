@@ -1,9 +1,5 @@
 FROM debian:bookworm AS build
 
-ENV MAKEFLAGS="-j1"
-ENV CXXFLAGS="-O0 -g"
-ENV CFLAGS="-O0 -g"
-
 ARG boost_version=1.86.0
 ARG boost_dir=boost_1_86_0
 ARG swig_version=4.2.0
@@ -18,7 +14,7 @@ RUN set -eux; \
     libpcre2-dev bison patchelf \
     java-11-amazon-corretto-jdk \
     libicu-dev gcc g++ graphviz \
-    zlib1g-dev libboost-all-dev libstdc++-12-dev; \
+    zlib1g-dev libc6-dev libboost-all-dev libstdc++-12-dev; \
     rm -rf /var/lib/apt/lists/*
 
 RUN set -eux; \
@@ -31,16 +27,27 @@ RUN set -eux; \
     ulimit -s unlimited; \
     ulimit -n 4096; \
     ./bootstrap.sh; \
-    ./b2 boost.stacktrace.from_exception=off \
-        --without-python \
+    echo "using gcc ;" > user-config.jam; \
+    ./b2 install \
+        boost.stacktrace.from_exception=off \
         --prefix=/usr \
-        -j4 \
-        link=shared \ 
+        -j1 \
+        link=shared \
         runtime-link=shared \
         cxxflags="-O0 -g" \
         linkflags="-Wl,--no-as-needed" \
-        install; \
+        --build-dir=build \
+        --layout=system \
+        threading=multi \
+        variant=release \
+        --with-locale \
+        --with-test \
+        --with-url \
+        --with-system \
+        --with-thread \
+        --with-atomic; \
     cd .. && rm -rf ${boost_dir} && /sbin/ldconfig
+
 
 RUN set -eux; \
     cd $HOME; \
@@ -49,11 +56,9 @@ RUN set -eux; \
     git checkout "v${swig_version}"; \
     ulimit -n 4096; \
     ./autogen.sh; \
-    export CFLAGS="-O0 -g"; \
-    export CXXFLAGS="-O0 -g"; \
-    ./configure --prefix=/usr \
-        --without-android --without-csharp --without-d \
-        --without-go --without-guile --without-javascript \
+    ./configure \
+        --prefix=/usr --without-android --without-csharp \
+        --without-d --without-go --without-guile --without-javascript \
         --without-lua --without-mzscheme --without-ocaml \
         --without-octave --without-perl5 --without-php \
         --without-python --without-python3 --without-r \
