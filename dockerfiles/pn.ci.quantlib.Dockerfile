@@ -54,4 +54,3 @@ FROM --platform=linux/${cpu_arch} debian:bookworm
 COPY --from=build /root/quantlib.tgz /
 
 CMD [ "bash" ]
-

@@ -1,5 +1,9 @@
 FROM debian:bookworm AS build
 
+ENV MAKEFLAGS="-j1"
+ENV CXXFLAGS="-O0 -g"
+ENV CFLAGS="-O0 -g"
+
 ARG boost_version=1.86.0
 ARG boost_dir=boost_1_86_0
 ARG swig_version=4.2.0
