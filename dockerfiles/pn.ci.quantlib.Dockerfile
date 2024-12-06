@@ -12,6 +12,8 @@ RUN set -eux; \
     mkdir -p $HOME/local; \
     mkdir build; \
     cd build; \
+    ulimit -s unlimited; \
+    ulimit -n 4096; \
     cmake .. -G "Unix Makefiles" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_CXX_FLAGS="-O0 -fPIC -g" \
