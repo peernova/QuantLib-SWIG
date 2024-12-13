@@ -27,7 +27,7 @@ RUN set -eux; \
     git pull upstream "v${quantlib_version}"; \
     ./autogen.sh; \
     export PATH=$PATH:$HOME/local/bin; \
-    CXXFLAS="-g -O2 -I/usr/include/boost -I$HOME/local/include" ./configure --with-jdk-include=/usr/lib/jvm/java-11-amazon-corretto/include --with-jdk-system-include=/usr/lib/jvm/java-11-amazon-corretto/include/linux --disable-java-finalizer --prefix=$HOME/local; \
+    CXXFLAGS="-g -O2 -I/usr/include/boost -I$HOME/local/include" ./configure --with-jdk-include=/usr/lib/jvm/java-11-amazon-corretto/include --with-jdk-system-include=/usr/lib/jvm/java-11-amazon-corretto/include/linux --disable-java-finalizer --prefix=$HOME/local; \
     make -C Java; \
     mkdir -p $HOME/local/java; \
     cp Java/libQuantLibJNI.* Java/QuantLib.jar $HOME/local/java
@@ -36,9 +36,8 @@ RUN set -eux; \
     cd $HOME/local; \
     tar czf ../quantlib.tgz .
 
-FROM --platform=$BUILDPLATFORM debian:bookworm
+FROM --platform=linux/${cpu_arch} debian:bookworm
 
 COPY --from=build /root/quantlib.tgz /
 
 CMD [ "bash" ]
-
