@@ -3,10 +3,10 @@
 set -eux
 
 # Default values
-ci=${ci:-false}
-quantlib_version=1.36
-boost_version=1.86.0
-swig_version=4.2.0
+: "${ci:=false}"
+: "${quantlib_version:=1.37}"
+: "${boost_version:=1.87.0}"
+: "${swig_version:=4.2.0}"
 boost_dir="$(echo "boost_${boost_version//./_}")"
 
 export quantlib_version boost_version boost_dir swig_version
@@ -108,7 +108,7 @@ chmod -R +w "${boostbrew}"
 cd $HOME/tmp
 rm -f "$boost_dir.*"
 rm -rf "$boost_dir"
-wget "https://boostorg.jfrog.io/artifactory/main/release/${boost_version}/source/$boost_dir.tar.gz"
+wget "https://archives.boost.io/release/${boost_version}/source/${boost_dir}.tar.gz"
 tar -xzf "$boost_dir.tar.gz"
 rm "$boost_dir.tar.gz"
 cd "$boost_dir"

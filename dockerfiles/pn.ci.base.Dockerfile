@@ -22,7 +22,7 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*
 
 RUN set -eux; \
-    wget https://boostorg.jfrog.io/artifactory/main/release/${boost_version}/source/${boost_dir}.tar.gz; \
+    wget https://archives.boost.io/release/${boost_version}/source/${boost_dir}.tar.gz; \
     tar xfz ${boost_dir}.tar.gz; \
     rm ${boost_dir}.tar.gz; \
     cd ${boost_dir}; \
