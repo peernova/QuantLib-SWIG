@@ -23,8 +23,6 @@ RUN set -eux; \
 RUN set -eux; \
     cd $HOME/QuantLib-SWIG; \
     git checkout peernova; \
-    git remote add upstream https://github.com/lballabio/quantlib-SWIG; \
-    git pull upstream "v${quantlib_version}"; \
     ./autogen.sh; \
     export PATH=$PATH:$HOME/local/bin; \
     CXXFLAGS="-g -O2 -I/usr/include/boost -I$HOME/local/include" ./configure --with-jdk-include=/usr/lib/jvm/java-11-amazon-corretto/include --with-jdk-system-include=/usr/lib/jvm/java-11-amazon-corretto/include/linux --disable-java-finalizer --prefix=$HOME/local; \
