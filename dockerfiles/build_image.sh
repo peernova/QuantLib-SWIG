@@ -4,9 +4,9 @@ set -eux
 
 # Default values
 : "${ci:=false}"
-: "${quantlib_version:=1.36}"
-: "${boost_version:=1.86.0}"
-: "${swig_version:=4.2.0}"
+: "${quantlib_version:=1.37}"
+: "${boost_version:=1.87.0}"
+: "${swig_version:=4.3.0}"
 boost_dir="$(echo "boost_${boost_version//./_}")"
 
 export quantlib_version boost_version boost_dir swig_version

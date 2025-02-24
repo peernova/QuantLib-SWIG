@@ -6,7 +6,7 @@ ENV CFLAGS="-O0 -g"
 
 ARG boost_version=1.86.0
 ARG boost_dir=boost_1_86_0
-ARG swig_version=4.2.0
+ARG swig_version=4.3.0
 
 RUN set -eux; \
     apt update && apt install -y wget gpg cmake make build-essential libbz2-dev libzstd-dev liblzma-dev; \

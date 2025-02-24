@@ -1,7 +1,7 @@
 
 ARG cpu_arch=amd64
 
-FROM bfrancojr/qlbase:${cpu_arch} as build
+FROM bfrancojr/qlbase:${cpu_arch} AS build
 
 ARG quantlib_version=1.34
 
