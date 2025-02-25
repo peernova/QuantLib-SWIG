@@ -100,7 +100,7 @@ unset CXXFLAGS
 unset CPPFLAGS
 unset LDFLAGS
 unset PKG_CONFIG_PATH
-brew install --quiet boost automake pcre2 wget icu4c xz zstd llvm bison cmake m4 gnupg
+brew install --quiet --overwrite boost automake pcre2 wget icu4c xz zstd llvm bison cmake m4 gnupg
 brew link m4 --force
 boostbrew="$(brew --cellar boost)/$(brew list --version boost | tail -1 | cut -d' ' -f2)"
 export CXX="$(brew --cellar llvm)/$(brew list --version llvm | tail -1 | cut -d' ' -f2)/bin/clang++"
