@@ -18,11 +18,6 @@ RUN set -eux; \
     git pull upstream "v${quantlib_version}"
 
 RUN set -eux; \
-    cd $HOME; \
-    git clone --recurse https://github.com/lballabio/QuantLib.git; \
-    git clone --recurse https://github.com/peernova/QuantLib-SWIG.git
-
-RUN set -eux; \
     cd $HOME/QuantLib; \
     mkdir -p $HOME/local; \
     mkdir build; \
