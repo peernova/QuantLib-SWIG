@@ -1,8 +1,8 @@
-FROM debian:bookworm as build
+FROM debian:bookworm AS build
 
-ARG boost_version=1.85.0
-ARG boost_dir=boost_1_85_0
-ARG swig_version=4.2.0
+ARG boost_version=1.87.0
+ARG boost_dir=boost_1_87_0
+ARG swig_version=4.3.0
 
 RUN set -eux; \
     apt update -y; \
@@ -13,7 +13,7 @@ RUN set -eux; \
     apt install -y git make libtool automake libpcre2-dev bison patchelf java-11-amazon-corretto-jdk libicu-dev gcc g++; \
     cd $HOME; \
     git clone https://github.com/swig/swig.git; \
-    wget https://boostorg.jfrog.io/artifactory/main/release/${boost_version}/source/${boost_dir}.tar.gz; \
+    wget https://archives.boost.io/release/${boost_version}/source/${boost_dir}.tar.gz; \
     tar xfz ${boost_dir}.tar.gz; \
     rm ${boost_dir}.tar.gz; \
     cd ${boost_dir}; \
