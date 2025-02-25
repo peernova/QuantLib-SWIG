@@ -1,8 +1,8 @@
 FROM debian:bookworm AS build
 
-ENV MAKEFLAGS="-j1"
-ENV CXXFLAGS="-O0 -g"
-ENV CFLAGS="-O0 -g"
+ENV MAKEFLAGS="-j1 V=1"
+ENV CXXFLAGS="-O0 -g -Wl,--no-keep-memory"
+ENV CFLAGS="-O0 -g -Wl,--no-keep-memory"
 
 ARG boost_version=1.87.0
 ARG boost_dir=boost_1_87_0
@@ -26,8 +26,6 @@ RUN set -eux; \
     tar xfz ${boost_dir}.tar.gz; \
     rm ${boost_dir}.tar.gz; \
     cd ${boost_dir}; \
-    sed -i 's/-O2/-O0/g' bootstrap.sh; \
-    sed -i 's/-O3/-O0/g' bootstrap.sh; \
     ./bootstrap.sh; \
     echo "using gcc ;" > user-config.jam; \
     ./b2 -d+2 install \
