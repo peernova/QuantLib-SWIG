@@ -243,13 +243,37 @@ for f in *.jar *.pom; do
   
   while [ $attempt -le $max_attempts ] && [ "$success" = false ]; do
     echo "Signing ${f} (attempt ${attempt}/${max_attempts})..."
-    if echo "${GPG_PASSPHRASE}" | gpg --armor --detach-sign --batch --yes --pinentry-mode=loopback --passphrase-fd 0 "${f}"; then
+
+    # Reset GPG agent before each attempt
+    gpgconf --kill gpg-agent
+    sleep 1
+    gpgconf --launch gpg-agent
+    sleep 1
+
+    # Clean up any existing locks before attempting
+    find ~/.gnupg -name "*.lock" -delete
+    find ~/.gnupg -name ".#*" -delete
+
+    # Try with timeout to prevent hanging
+    if timeout 30 bash -c "echo \"${GPG_PASSPHRASE}\" | gpg --armor --detach-sign --batch --yes --pinentry-mode=loopback --passphrase-fd 0 \"${f}\""; then
       success=true
       echo "Successfully signed ${f}"
     else
       echo "Failed to sign ${f}, waiting before retry..."
-      # Kill any stuck gpg-agent processes (optional, use with caution)
-      pkill -f gpg-agent
+
+      # More aggressive cleanup
+      pkill -9 -f gpg-agent
+      pkill -9 -f gpg
+      find ~/.gnupg -name "*.lock" -delete
+      find ~/.gnupg -name ".#*" -delete
+
+      # Check for specific process holding lock (from your error message)
+      lock_pid=$(ps aux | grep gpg | grep -v grep | awk '{print $2}')
+      if [ ! -z "$lock_pid" ]; then
+        echo "Killing GPG process with PID: $lock_pid"
+        kill -9 $lock_pid 2>/dev/null || true
+      fi
+
       sleep 5
       attempt=$((attempt+1))
     fi
@@ -260,7 +284,6 @@ for f in *.jar *.pom; do
     exit 1
   fi
 done
-
 
 cd "${distDir}"
 zip -r "${HOME}/quantlib-${quantlib_version}".zip io
