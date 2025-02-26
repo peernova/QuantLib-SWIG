@@ -32,12 +32,11 @@ RUN set -eux; \
     echo "using gcc ;" > user-config.jam; \
     ./b2 -d+2 install \
         boost.stacktrace.from_exception=off \
+        --without-python \
         --prefix=/usr \
         -j1 \
         link=shared \
         runtime-link=shared \
-        cxxflags="-O0 -g" \
-        linkflags="-Wl,--no-as-needed" \
         --build-dir=build \
         --layout=system \
         threading=multi \
