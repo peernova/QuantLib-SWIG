@@ -229,10 +229,38 @@ cat << EOF >quantlib-${quantlib_version}.pom
 EOF
 
 for f in *.jar *.pom; do
+  # Generate checksums
   cat "${f}" | md5 >"${f}.md5"
   cat "${f}" | shasum | cut -d ' ' -f 1 >"${f}.sha1"
-  echo "${GPG_PASSPHRASE}" | gpg --armor --detach-sign --batch --yes --pinentry-mode=loopback --passphrase-fd 0 "${f}"
+  
+  # Add a small delay between GPG operations to prevent lock contention
+  sleep 5
+  
+  # Use a timeout and retry mechanism for GPG signing
+  max_attempts=5
+  attempt=1
+  success=false
+  
+  while [ $attempt -le $max_attempts ] && [ "$success" = false ]; do
+    echo "Signing ${f} (attempt ${attempt}/${max_attempts})..."
+    if echo "${GPG_PASSPHRASE}" | gpg --armor --detach-sign --batch --yes --pinentry-mode=loopback --passphrase-fd 0 "${f}"; then
+      success=true
+      echo "Successfully signed ${f}"
+    else
+      echo "Failed to sign ${f}, waiting before retry..."
+      # Kill any stuck gpg-agent processes (optional, use with caution)
+      pkill -f gpg-agent
+      sleep 5
+      attempt=$((attempt+1))
+    fi
+  done
+  
+  if [ "$success" = false ]; then
+    echo "Failed to sign ${f} after ${max_attempts} attempts"
+    exit 1
+  fi
 done
+
 
 cd "${distDir}"
 zip -r "${HOME}/quantlib-${quantlib_version}".zip io
