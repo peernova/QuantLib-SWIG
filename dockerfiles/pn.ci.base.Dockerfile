@@ -10,6 +10,8 @@ ARG swig_version=4.3.0
 
 RUN set -eux; \
     apt update && apt install -y wget gpg cmake make build-essential libbz2-dev libzstd-dev liblzma-dev; \
+    apt-get install -y --reinstall ca-certificates debconf openssl; \
+    update-ca-certificates --fresh; \
     apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys A122542AB04F24E3; \
     wget -O - https://apt.corretto.aws/corretto.key | gpg --dearmor -o /usr/share/keyrings/corretto-keyring.gpg; \
     echo "deb [signed-by=/usr/share/keyrings/corretto-keyring.gpg] https://apt.corretto.aws stable main" | tee /etc/apt/sources.list.d/corretto.list; \
