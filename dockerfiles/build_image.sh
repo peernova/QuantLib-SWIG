@@ -240,42 +240,69 @@ for f in *.jar *.pom; do
   max_attempts=5
   attempt=1
   success=false
+  timeout_seconds=30
   
   while [ $attempt -le $max_attempts ] && [ "$success" = false ]; do
     echo "Signing ${f} (attempt ${attempt}/${max_attempts})..."
 
     # Reset GPG agent before each attempt
-    gpgconf --kill gpg-agent
+    gpgconf --kill gpg-agent 2>/dev/null || true
     sleep 1
-    gpgconf --launch gpg-agent
+    gpgconf --launch gpg-agent 2>/dev/null || true
     sleep 1
 
     # Clean up any existing locks before attempting
-    find ~/.gnupg -name "*.lock" -delete
-    find ~/.gnupg -name ".#*" -delete
+    find ~/.gnupg -name "*.lock" -delete 2>/dev/null || true
+    find ~/.gnupg -name ".#*" -delete 2>/dev/null || true
 
-    # Try with timeout to prevent hanging
-    if timeout 30 bash -c "echo \"${GPG_PASSPHRASE}\" | gpg --armor --detach-sign --batch --yes --pinentry-mode=loopback --passphrase-fd 0 \"${f}\""; then
-      success=true
-      echo "Successfully signed ${f}"
-    else
-      echo "Failed to sign ${f}, waiting before retry..."
-
+    # Run GPG in background
+    echo "${GPG_PASSPHRASE}" | gpg --armor --detach-sign --batch --yes --pinentry-mode=loopback --passphrase-fd 0 "${f}" &
+    gpg_pid=$!
+    
+    # Wait up to timeout_seconds
+    wait_time=0
+    while [ $wait_time -lt $timeout_seconds ] && kill -0 $gpg_pid 2>/dev/null; do
+      sleep 1
+      wait_time=$((wait_time+1))
+    done
+    
+    # If still running, kill it
+    if kill -0 $gpg_pid 2>/dev/null; then
+      kill -9 $gpg_pid 2>/dev/null || true
+      echo "GPG process timed out after ${timeout_seconds} seconds"
+      
       # More aggressive cleanup
-      pkill -9 -f gpg-agent
-      pkill -9 -f gpg
-      find ~/.gnupg -name "*.lock" -delete
-      find ~/.gnupg -name ".#*" -delete
-
-      # Check for specific process holding lock (from your error message)
+      pkill -9 -f gpg-agent 2>/dev/null || true
+      pkill -9 -f gpg 2>/dev/null || true
+      find ~/.gnupg -name "*.lock" -delete 2>/dev/null || true
+      find ~/.gnupg -name ".#*" -delete 2>/dev/null || true
+      
+      # Check for specific process holding lock
       lock_pid=$(ps aux | grep gpg | grep -v grep | awk '{print $2}')
       if [ ! -z "$lock_pid" ]; then
         echo "Killing GPG process with PID: $lock_pid"
         kill -9 $lock_pid 2>/dev/null || true
       fi
-
+      
       sleep 5
       attempt=$((attempt+1))
+    else
+      # Check if it was successful by looking for the signature file
+      if [ -f "${f}.asc" ]; then
+        success=true
+        echo "Successfully signed ${f}"
+      else
+        echo "Failed to sign ${f}, waiting before retry..."
+        
+        # More aggressive cleanup
+        pkill -9 -f gpg-agent 2>/dev/null || true
+        pkill -9 -f gpg 2>/dev/null || true
+        find ~/.gnupg -name "*.lock" -delete 2>/dev/null || true
+        find ~/.gnupg -name ".#*" -delete 2>/dev/null || true
+        
+        sleep 5
+        attempt=$((attempt+1))
+      fi
     fi
   done
   
