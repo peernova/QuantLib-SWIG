@@ -67,8 +67,8 @@ rm -rf $HOME/tmp/libs
 
 if [ "$ci" = true ]; then
   for p in amd64 arm64; do
-    docker buildx build --memory=16g --memory-swap=4g --platform linux/${p} -t ${repo}/qlbase:${p} --build-arg="boost_version=$boost_version" --build-arg="boost_dir=$boost_dir" --build-arg="swig_version=$swig_version" -f pn.ci.base.Dockerfile .
-    docker buildx build --memory=16g --memory-swap=4g --platform linux/${p} --build-arg="cpu_arch=${p}" -t ${repo}/quantlib:${p} --build-arg="quantlib_version=$quantlib_version" -f pn.ci.quantlib.Dockerfile .
+    docker buildx build --memory=20g --memory-swap=20g --ulimit stack=536870912 --ulimit nofile=32768 --platform linux/${p} -t ${repo}/qlbase:${p} --build-arg="boost_version=$boost_version" --build-arg="boost_dir=$boost_dir" --build-arg="swig_version=$swig_version" -f pn.ci.base.Dockerfile .
+    docker buildx build --memory=20g --memory-swap=20g --ulimit stack=536870912 --ulimit nofile=32768 --platform linux/${p} --build-arg="cpu_arch=${p}" -t ${repo}/quantlib:${p} --build-arg="quantlib_version=$quantlib_version" -f pn.ci.quantlib.Dockerfile .
     mkdir -p $HOME/tmp/libs/${p}
     docker run -ti --platform linux/${p} --mount type=bind,source=$HOME/tmp/libs/${p},target=/libs ${repo}/quantlib:${p} /bin/sh -c 'cp /quantlib.tgz /libs'
   done
@@ -229,9 +229,87 @@ cat << EOF >quantlib-${quantlib_version}.pom
 EOF
 
 for f in *.jar *.pom; do
+  # Generate checksums
   cat "${f}" | md5 >"${f}.md5"
   cat "${f}" | shasum | cut -d ' ' -f 1 >"${f}.sha1"
-  echo "${GPG_PASSPHRASE}" | gpg --armor --detach-sign --batch --yes --pinentry-mode=loopback --passphrase-fd 0 "${f}"
+  
+  # Add a small delay between GPG operations to prevent lock contention
+  sleep 5
+  
+  # Use a timeout and retry mechanism for GPG signing
+  max_attempts=5
+  attempt=1
+  success=false
+  timeout_seconds=30
+  
+  while [ $attempt -le $max_attempts ] && [ "$success" = false ]; do
+    echo "Signing ${f} (attempt ${attempt}/${max_attempts})..."
+
+    # Reset GPG agent before each attempt
+    gpgconf --kill gpg-agent 2>/dev/null || true
+    sleep 1
+    gpgconf --launch gpg-agent 2>/dev/null || true
+    sleep 1
+
+    # Clean up any existing locks before attempting
+    find ~/.gnupg -name "*.lock" -delete 2>/dev/null || true
+    find ~/.gnupg -name ".#*" -delete 2>/dev/null || true
+
+    # Run GPG in background
+    echo "${GPG_PASSPHRASE}" | gpg --armor --detach-sign --batch --yes --pinentry-mode=loopback --passphrase-fd 0 "${f}" &
+    gpg_pid=$!
+    
+    # Wait up to timeout_seconds
+    wait_time=0
+    while [ $wait_time -lt $timeout_seconds ] && kill -0 $gpg_pid 2>/dev/null; do
+      sleep 1
+      wait_time=$((wait_time+1))
+    done
+    
+    # If still running, kill it
+    if kill -0 $gpg_pid 2>/dev/null; then
+      kill -9 $gpg_pid 2>/dev/null || true
+      echo "GPG process timed out after ${timeout_seconds} seconds"
+      
+      # More aggressive cleanup
+      pkill -9 -f gpg-agent 2>/dev/null || true
+      pkill -9 -f gpg 2>/dev/null || true
+      find ~/.gnupg -name "*.lock" -delete 2>/dev/null || true
+      find ~/.gnupg -name ".#*" -delete 2>/dev/null || true
+      
+      # Check for specific process holding lock
+      lock_pid=$(ps aux | grep gpg | grep -v grep | awk '{print $2}')
+      if [ ! -z "$lock_pid" ]; then
+        echo "Killing GPG process with PID: $lock_pid"
+        kill -9 $lock_pid 2>/dev/null || true
+      fi
+      
+      sleep 5
+      attempt=$((attempt+1))
+    else
+      # Check if it was successful by looking for the signature file
+      if [ -f "${f}.asc" ]; then
+        success=true
+        echo "Successfully signed ${f}"
+      else
+        echo "Failed to sign ${f}, waiting before retry..."
+        
+        # More aggressive cleanup
+        pkill -9 -f gpg-agent 2>/dev/null || true
+        pkill -9 -f gpg 2>/dev/null || true
+        find ~/.gnupg -name "*.lock" -delete 2>/dev/null || true
+        find ~/.gnupg -name ".#*" -delete 2>/dev/null || true
+        
+        sleep 5
+        attempt=$((attempt+1))
+      fi
+    fi
+  done
+  
+  if [ "$success" = false ]; then
+    echo "Failed to sign ${f} after ${max_attempts} attempts"
+    exit 1
+  fi
 done
 
 cd "${distDir}"

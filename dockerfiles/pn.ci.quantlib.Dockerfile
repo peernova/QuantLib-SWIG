@@ -12,8 +12,6 @@ RUN set -eux; \
     mkdir -p $HOME/local; \
     mkdir build; \
     cd build; \
-    ulimit -s unlimited; \
-    ulimit -n 4096; \
     cmake .. -G "Unix Makefiles" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_CXX_FLAGS="-O0 -fPIC -g" \
@@ -23,7 +21,7 @@ RUN set -eux; \
     -DQL_BUILD_EXAMPLES=OFF \
     -DQL_BUILD_TEST_SUITE=OFF \
     -DCMAKE_INSTALL_PREFIX=$HOME/local; \
-    CXXFLAGS="-O0" make -j1; \
+    make -j1; \
     make install; \
     [[ "$(uname)" == "Linux" ]] && patchelf --set-soname libQuantLib.so $HOME/local/lib/libQuantLib.so; \
     /sbin/ldconfig $HOME/local/lib
